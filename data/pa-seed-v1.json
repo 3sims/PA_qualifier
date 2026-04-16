@@ -1,0 +1,587 @@
+{
+  "pa_profiles": [
+    {
+      "id": "esker",
+      "name": "Esker",
+      "status": "immatriculée",
+      "data_hosting": "FRANCE",
+      "lead_time_weeks_min": 12,
+      "lead_time_weeks_max": 20,
+      "last_updated": "2025-09-01",
+      "erp_integrations": [
+        {
+          "erp_id": "sap_s4hana",
+          "erp_name": "SAP S/4HANA",
+          "integration_type": "native",
+          "connector_version": "2024.1",
+          "coverage": ["emis", "recus", "avoirs"],
+          "last_verified": "2025-03-01"
+        },
+        {
+          "erp_id": "sap_ecc",
+          "erp_name": "SAP ECC",
+          "integration_type": "native",
+          "connector_version": "2023.3",
+          "coverage": ["emis", "recus", "avoirs"],
+          "last_verified": "2025-03-01"
+        },
+        {
+          "erp_id": "oracle_netsuite",
+          "erp_name": "Oracle NetSuite",
+          "integration_type": "native",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2025-01-01"
+        },
+        {
+          "erp_id": "ms_d365",
+          "erp_name": "Microsoft Dynamics 365",
+          "integration_type": "connector",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2024-12-01"
+        },
+        {
+          "erp_id": "sage_x3",
+          "erp_name": "Sage X3",
+          "integration_type": "native",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2024-10-01"
+        }
+      ],
+      "coverage": {
+        "emission": "✓",
+        "emission_confidence": "official",
+        "reception": "✓",
+        "reception_confidence": "official",
+        "avoirs": "✓",
+        "avoirs_confidence": "official",
+        "e_reporting": "✓",
+        "e_reporting_confidence": "official",
+        "b2g_chorus": "~",
+        "b2g_chorus_confidence": "indicative",
+        "edi_edifact": "✓",
+        "edi_edifact_confidence": "official",
+        "peppol": "✓",
+        "peppol_confidence": "official",
+        "archivage_10ans": "✓",
+        "archivage_10ans_confidence": "official",
+        "iso27001": "✓",
+        "iso27001_confidence": "official",
+        "api_rest": "✓",
+        "api_rest_confidence": "official",
+        "support_fr": "✓",
+        "support_fr_confidence": "official"
+      }
+    },
+    {
+      "id": "basware",
+      "name": "Basware",
+      "status": "immatriculée",
+      "data_hosting": "EU",
+      "lead_time_weeks_min": 14,
+      "lead_time_weeks_max": 24,
+      "last_updated": "2025-07-01",
+      "erp_integrations": [
+        {
+          "erp_id": "sap_s4hana",
+          "erp_name": "SAP S/4HANA",
+          "integration_type": "native",
+          "coverage": ["emis", "recus", "avoirs"],
+          "last_verified": "2025-02-01"
+        },
+        {
+          "erp_id": "sap_ecc",
+          "erp_name": "SAP ECC",
+          "integration_type": "native",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2025-02-01"
+        },
+        {
+          "erp_id": "oracle_netsuite",
+          "erp_name": "Oracle NetSuite",
+          "integration_type": "api",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2024-11-01"
+        },
+        {
+          "erp_id": "ms_d365",
+          "erp_name": "Microsoft Dynamics 365",
+          "integration_type": "native",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2024-12-01"
+        }
+      ],
+      "coverage": {
+        "emission": "✓",
+        "emission_confidence": "official",
+        "reception": "✓",
+        "reception_confidence": "official",
+        "avoirs": "✓",
+        "avoirs_confidence": "official",
+        "e_reporting": "✓",
+        "e_reporting_confidence": "official",
+        "b2g_chorus": "?",
+        "b2g_chorus_confidence": "unverified",
+        "edi_edifact": "✓",
+        "edi_edifact_confidence": "official",
+        "peppol": "✓",
+        "peppol_confidence": "official",
+        "archivage_10ans": "~",
+        "archivage_10ans_confidence": "indicative",
+        "iso27001": "✓",
+        "iso27001_confidence": "official",
+        "api_rest": "✓",
+        "api_rest_confidence": "official",
+        "support_fr": "~",
+        "support_fr_confidence": "indicative"
+      }
+    },
+    {
+      "id": "yooz",
+      "name": "Yooz",
+      "status": "immatriculée",
+      "data_hosting": "FRANCE",
+      "lead_time_weeks_min": 8,
+      "lead_time_weeks_max": 16,
+      "last_updated": "2025-08-01",
+      "erp_integrations": [
+        {
+          "erp_id": "sage_x3",
+          "erp_name": "Sage X3",
+          "integration_type": "native",
+          "coverage": ["emis", "recus", "avoirs"],
+          "last_verified": "2025-04-01"
+        },
+        {
+          "erp_id": "sage_100",
+          "erp_name": "Sage 100",
+          "integration_type": "native",
+          "coverage": ["emis", "recus", "avoirs"],
+          "last_verified": "2025-04-01"
+        },
+        {
+          "erp_id": "cegid_xrp",
+          "erp_name": "Cegid XRP Flex",
+          "integration_type": "native",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2025-02-01"
+        },
+        {
+          "erp_id": "sap_s4hana",
+          "erp_name": "SAP S/4HANA",
+          "integration_type": "connector",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2024-11-01"
+        },
+        {
+          "erp_id": "ms_d365",
+          "erp_name": "Microsoft Dynamics 365",
+          "integration_type": "connector",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2024-09-01"
+        },
+        {
+          "erp_id": "odoo",
+          "erp_name": "Odoo",
+          "integration_type": "native",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2025-01-01"
+        }
+      ],
+      "coverage": {
+        "emission": "✓",
+        "emission_confidence": "official",
+        "reception": "✓",
+        "reception_confidence": "official",
+        "avoirs": "✓",
+        "avoirs_confidence": "official",
+        "e_reporting": "✓",
+        "e_reporting_confidence": "official",
+        "b2g_chorus": "?",
+        "b2g_chorus_confidence": "unverified",
+        "edi_edifact": "~",
+        "edi_edifact_confidence": "indicative",
+        "peppol": "~",
+        "peppol_confidence": "indicative",
+        "archivage_10ans": "✓",
+        "archivage_10ans_confidence": "official",
+        "iso27001": "✓",
+        "iso27001_confidence": "official",
+        "api_rest": "✓",
+        "api_rest_confidence": "official",
+        "support_fr": "✓",
+        "support_fr_confidence": "official"
+      }
+    },
+    {
+      "id": "generix",
+      "name": "Generix",
+      "status": "immatriculée",
+      "data_hosting": "FRANCE",
+      "lead_time_weeks_min": 16,
+      "lead_time_weeks_max": 28,
+      "last_updated": "2025-06-01",
+      "erp_integrations": [
+        {
+          "erp_id": "sap_s4hana",
+          "erp_name": "SAP S/4HANA",
+          "integration_type": "native",
+          "coverage": ["emis", "recus", "avoirs"],
+          "last_verified": "2025-01-01"
+        },
+        {
+          "erp_id": "sap_ecc",
+          "erp_name": "SAP ECC",
+          "integration_type": "native",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2025-01-01"
+        },
+        {
+          "erp_id": "infor_m3",
+          "erp_name": "Infor M3",
+          "integration_type": "native",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2024-10-01"
+        }
+      ],
+      "coverage": {
+        "emission": "✓",
+        "emission_confidence": "official",
+        "reception": "✓",
+        "reception_confidence": "official",
+        "avoirs": "✓",
+        "avoirs_confidence": "official",
+        "e_reporting": "✓",
+        "e_reporting_confidence": "official",
+        "b2g_chorus": "✓",
+        "b2g_chorus_confidence": "official",
+        "edi_edifact": "✓",
+        "edi_edifact_confidence": "official",
+        "peppol": "✓",
+        "peppol_confidence": "official",
+        "archivage_10ans": "✓",
+        "archivage_10ans_confidence": "official",
+        "iso27001": "✓",
+        "iso27001_confidence": "official",
+        "api_rest": "✓",
+        "api_rest_confidence": "official",
+        "support_fr": "~",
+        "support_fr_confidence": "indicative"
+      }
+    },
+    {
+      "id": "sage_pa",
+      "name": "Sage (module PA)",
+      "status": "immatriculée",
+      "data_hosting": "EU",
+      "lead_time_weeks_min": 8,
+      "lead_time_weeks_max": 14,
+      "last_updated": "2025-07-01",
+      "erp_integrations": [
+        {
+          "erp_id": "sage_x3",
+          "erp_name": "Sage X3",
+          "integration_type": "native",
+          "coverage": ["emis", "recus", "avoirs"],
+          "last_verified": "2025-05-01"
+        },
+        {
+          "erp_id": "sage_100",
+          "erp_name": "Sage 100",
+          "integration_type": "native",
+          "coverage": ["emis", "recus", "avoirs"],
+          "last_verified": "2025-05-01"
+        },
+        {
+          "erp_id": "sage_50",
+          "erp_name": "Sage 50",
+          "integration_type": "native",
+          "coverage": ["emis"],
+          "last_verified": "2025-04-01"
+        }
+      ],
+      "coverage": {
+        "emission": "✓",
+        "emission_confidence": "official",
+        "reception": "✓",
+        "reception_confidence": "official",
+        "avoirs": "✓",
+        "avoirs_confidence": "official",
+        "e_reporting": "✓",
+        "e_reporting_confidence": "official",
+        "b2g_chorus": "~",
+        "b2g_chorus_confidence": "indicative",
+        "edi_edifact": "~",
+        "edi_edifact_confidence": "indicative",
+        "peppol": "~",
+        "peppol_confidence": "indicative",
+        "archivage_10ans": "✓",
+        "archivage_10ans_confidence": "official",
+        "iso27001": "?",
+        "iso27001_confidence": "unverified",
+        "api_rest": "✓",
+        "api_rest_confidence": "official",
+        "support_fr": "✓",
+        "support_fr_confidence": "official"
+      }
+    },
+    {
+      "id": "cegid_pa",
+      "name": "Cegid (module PA)",
+      "status": "immatriculée",
+      "data_hosting": "FRANCE",
+      "lead_time_weeks_min": 8,
+      "lead_time_weeks_max": 16,
+      "last_updated": "2025-08-01",
+      "erp_integrations": [
+        {
+          "erp_id": "cegid_xrp",
+          "erp_name": "Cegid XRP Flex",
+          "integration_type": "native",
+          "coverage": ["emis", "recus", "avoirs"],
+          "last_verified": "2025-06-01"
+        },
+        {
+          "erp_id": "cegid_loop",
+          "erp_name": "Cegid Loop",
+          "integration_type": "native",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2025-06-01"
+        },
+        {
+          "erp_id": "sap_s4hana",
+          "erp_name": "SAP S/4HANA",
+          "integration_type": "connector",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2024-12-01"
+        }
+      ],
+      "coverage": {
+        "emission": "✓",
+        "emission_confidence": "official",
+        "reception": "✓",
+        "reception_confidence": "official",
+        "avoirs": "✓",
+        "avoirs_confidence": "official",
+        "e_reporting": "✓",
+        "e_reporting_confidence": "official",
+        "b2g_chorus": "~",
+        "b2g_chorus_confidence": "indicative",
+        "edi_edifact": "~",
+        "edi_edifact_confidence": "indicative",
+        "peppol": "?",
+        "peppol_confidence": "unverified",
+        "archivage_10ans": "✓",
+        "archivage_10ans_confidence": "official",
+        "iso27001": "✓",
+        "iso27001_confidence": "official",
+        "api_rest": "✓",
+        "api_rest_confidence": "official",
+        "support_fr": "✓",
+        "support_fr_confidence": "official"
+      }
+    },
+    {
+      "id": "cegedim",
+      "name": "Cegedim e-business",
+      "status": "immatriculée",
+      "data_hosting": "FRANCE",
+      "lead_time_weeks_min": 12,
+      "lead_time_weeks_max": 20,
+      "last_updated": "2025-05-01",
+      "erp_integrations": [
+        {
+          "erp_id": "sap_s4hana",
+          "erp_name": "SAP S/4HANA",
+          "integration_type": "connector",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2024-11-01"
+        },
+        {
+          "erp_id": "oracle_ebs",
+          "erp_name": "Oracle E-Business Suite",
+          "integration_type": "connector",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2024-09-01"
+        },
+        {
+          "erp_id": "sage_x3",
+          "erp_name": "Sage X3",
+          "integration_type": "api",
+          "coverage": ["emis"],
+          "last_verified": "2024-07-01"
+        }
+      ],
+      "coverage": {
+        "emission": "✓",
+        "emission_confidence": "official",
+        "reception": "✓",
+        "reception_confidence": "official",
+        "avoirs": "✓",
+        "avoirs_confidence": "official",
+        "e_reporting": "✓",
+        "e_reporting_confidence": "official",
+        "b2g_chorus": "✓",
+        "b2g_chorus_confidence": "official",
+        "edi_edifact": "✓",
+        "edi_edifact_confidence": "official",
+        "peppol": "?",
+        "peppol_confidence": "unverified",
+        "archivage_10ans": "✓",
+        "archivage_10ans_confidence": "official",
+        "iso27001": "✓",
+        "iso27001_confidence": "official",
+        "api_rest": "~",
+        "api_rest_confidence": "indicative",
+        "support_fr": "✓",
+        "support_fr_confidence": "official"
+      }
+    },
+    {
+      "id": "seres",
+      "name": "Seres",
+      "status": "immatriculée",
+      "data_hosting": "FRANCE",
+      "lead_time_weeks_min": 14,
+      "lead_time_weeks_max": 24,
+      "last_updated": "2025-04-01",
+      "erp_integrations": [
+        {
+          "erp_id": "sap_s4hana",
+          "erp_name": "SAP S/4HANA",
+          "integration_type": "native",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2024-12-01"
+        },
+        {
+          "erp_id": "sap_ecc",
+          "erp_name": "SAP ECC",
+          "integration_type": "native",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2024-12-01"
+        },
+        {
+          "erp_id": "cegid_xrp",
+          "erp_name": "Cegid XRP Flex",
+          "integration_type": "connector",
+          "coverage": ["emis"],
+          "last_verified": "2024-09-01"
+        }
+      ],
+      "coverage": {
+        "emission": "✓",
+        "emission_confidence": "official",
+        "reception": "✓",
+        "reception_confidence": "official",
+        "avoirs": "✓",
+        "avoirs_confidence": "official",
+        "e_reporting": "✓",
+        "e_reporting_confidence": "official",
+        "b2g_chorus": "✓",
+        "b2g_chorus_confidence": "official",
+        "edi_edifact": "✓",
+        "edi_edifact_confidence": "official",
+        "peppol": "?",
+        "peppol_confidence": "unverified",
+        "archivage_10ans": "✓",
+        "archivage_10ans_confidence": "official",
+        "iso27001": "✓",
+        "iso27001_confidence": "official",
+        "api_rest": "~",
+        "api_rest_confidence": "indicative",
+        "support_fr": "✓",
+        "support_fr_confidence": "official"
+      }
+    },
+    {
+      "id": "tradeshift",
+      "name": "Tradeshift",
+      "status": "en_cours",
+      "data_hosting": "EU",
+      "lead_time_weeks_min": 20,
+      "lead_time_weeks_max": 36,
+      "last_updated": "2025-03-01",
+      "erp_integrations": [
+        {
+          "erp_id": "sap_s4hana",
+          "erp_name": "SAP S/4HANA",
+          "integration_type": "native",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2024-09-01"
+        },
+        {
+          "erp_id": "oracle_ebs",
+          "erp_name": "Oracle E-Business Suite",
+          "integration_type": "native",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2024-07-01"
+        }
+      ],
+      "coverage": {
+        "emission": "✓",
+        "emission_confidence": "official",
+        "reception": "✓",
+        "reception_confidence": "official",
+        "avoirs": "~",
+        "avoirs_confidence": "indicative",
+        "e_reporting": "~",
+        "e_reporting_confidence": "indicative",
+        "b2g_chorus": "?",
+        "b2g_chorus_confidence": "unverified",
+        "edi_edifact": "✓",
+        "edi_edifact_confidence": "official",
+        "peppol": "✓",
+        "peppol_confidence": "official",
+        "archivage_10ans": "?",
+        "archivage_10ans_confidence": "unverified",
+        "iso27001": "✓",
+        "iso27001_confidence": "official",
+        "api_rest": "✓",
+        "api_rest_confidence": "official",
+        "support_fr": "?",
+        "support_fr_confidence": "unverified"
+      }
+    },
+    {
+      "id": "pennylane",
+      "name": "Pennylane",
+      "status": "en_cours",
+      "data_hosting": "FRANCE",
+      "lead_time_weeks_min": 4,
+      "lead_time_weeks_max": 8,
+      "last_updated": "2025-09-01",
+      "erp_integrations": [
+        {
+          "erp_id": "pennylane",
+          "erp_name": "Pennylane",
+          "integration_type": "native",
+          "coverage": ["emis", "recus"],
+          "last_verified": "2025-08-01"
+        }
+      ],
+      "coverage": {
+        "emission": "✓",
+        "emission_confidence": "official",
+        "reception": "✓",
+        "reception_confidence": "official",
+        "avoirs": "✓",
+        "avoirs_confidence": "official",
+        "e_reporting": "✓",
+        "e_reporting_confidence": "official",
+        "b2g_chorus": "✗",
+        "b2g_chorus_confidence": "official",
+        "edi_edifact": "✗",
+        "edi_edifact_confidence": "official",
+        "peppol": "?",
+        "peppol_confidence": "unverified",
+        "archivage_10ans": "?",
+        "archivage_10ans_confidence": "unverified",
+        "iso27001": "?",
+        "iso27001_confidence": "unverified",
+        "api_rest": "✓",
+        "api_rest_confidence": "official",
+        "support_fr": "✓",
+        "support_fr_confidence": "official"
+      }
+    }
+  ]
+}

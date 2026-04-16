@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find src/app -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" -o -name \"*.css\" \\\\\\) -exec wc -l {} +)",
+      "Bash(awk '{print $1, $2}')",
+      "Bash(sort -k2)",
+      "Bash(ls -lah *.json *.ts *.js)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(npx next:*)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(rm -f next.config.mjs)",
+      "Bash(rm -rf src/app/auth src/app/dashboard src/app/missions src/app/api/responses src/app/api/pdf src/app/api/scoring src/types src/lib/supabase.ts src/lib/storage.ts src/lib/pdf-builder.ts src/lib/questionnaire.ts src/components/wizard/ProgressBar.tsx src/components/wizard/QuestionField.tsx src/components/wizard/QuestionForm.tsx src/components/wizard/SectionNav.tsx src/components/results/ScoreCard.tsx src/components/results/ScoreMatrix.tsx src/components/results/Shortlist.tsx)",
+      "Bash(tee /tmp/next-dev.log)",
+      "Bash(curl -s -o /dev/null -w \"landing:%{http_code}\\\\n\" http://localhost:3456/)",
+      "Bash(curl -s -o /dev/null -w \"quest:%{http_code}\\\\n\" http://localhost:3456/questionnaire)",
+      "Bash(curl -s -X POST http://localhost:3456/api/missions -H \"Content-Type: application/json\" -d '{\"client_name\":\"Acme Test\",\"client_sector\":\"Industrie\"}')",
+      "Bash(curl -s -X POST http://localhost:3456/api/missions -H \"Content-Type: application/json\" -d '{\"client_name\":\"X\",\"client_sector\":\"Y\"}')",
+      "Read(//c/tmp/claude/**)",
+      "Read(//c/Users/esimou/AppData/Local/Temp/claude/**)",
+      "Bash(curl -s http://localhost:3456/ -o /dev/null -w \"%{http_code}\\\\n\")",
+      "Bash(npx tsx:*)",
+      "Bash(curl -s -X POST http://localhost:3456/api/missions -H \"Content-Type: application/json\" -d '{\"client_name\":\"Test\",\"client_sector\":\"industry\"}')",
+      "Bash(curl -s -X POST http://localhost:3456/api/report -H 'Content-Type: application/json' -d '{\"mission_id\":\"956753af-d8fc-4a64-9bb7-196345bada4e\"}' -o /tmp/report.pdf -w 'HTTP %{http_code} size %{size_download}\\\\n')",
+      "Bash(npm ls:*)",
+      "Bash(curl -s -X POST http://localhost:3456/api/report -H 'Content-Type: application/json' -d '{\"mission_id\":\"956753af-d8fc-4a64-9bb7-196345bada4e\"}')",
+      "Bash(npm view:*)",
+      "Bash(grep -n \"require\\\\$\\\\$1\\\\|import.*react\" node_modules/@react-pdf/renderer/lib/react-pdf.js)",
+      "Bash(ls node_modules/next/dist/compiled/react*)",
+      "Bash(curl -s -X POST http://localhost:3456/api/missions -H \"Content-Type: application/json\" -d '{\"client_name\":\"E2E\",\"client_sector\":\"Services\"}')",
+      "Bash(find /c/Users/esimou/Documents/Github/PA_qualifier/src/lib -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) -exec basename {} \\\\;)"
+    ]
+  }
+}

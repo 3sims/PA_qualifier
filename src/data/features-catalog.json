@@ -1,0 +1,134 @@
+{
+  "features": [
+    {
+      "id": "emission_b2b",
+      "category": "o2c",
+      "name": "Émission B2B conforme",
+      "description": "Génération et transmission de factures électroniques B2B conformes DGFiP (Factur-X, UBL, EDIFACT)",
+      "weight_default": 10,
+      "is_eliminatory": true,
+      "coverage_key": "emission",
+      "rfi_question_template": "Décrivez le flux d'émission d'une facture B2B : depuis quel système, quels formats supportés (Factur-X, UBL, EDIFACT), quel mécanisme de transmission à la PA ?"
+    },
+    {
+      "id": "reception_b2b",
+      "category": "p2p",
+      "name": "Réception B2B",
+      "description": "Réception et traitement des factures électroniques fournisseurs",
+      "weight_default": 10,
+      "is_eliminatory": true,
+      "coverage_key": "reception",
+      "rfi_question_template": "Décrivez le flux de réception d'une facture B2B fournisseur : formats acceptés, statuts de traitement, intégration dans le workflow de validation ?"
+    },
+    {
+      "id": "data_hosting",
+      "category": "compliance",
+      "name": "Hébergement données France",
+      "description": "Hébergement des données en France (datacenters certifiés HDS ou équivalents)",
+      "weight_default": 8,
+      "is_eliminatory": true,
+      "coverage_key": null,
+      "rfi_question_template": "Confirmez l'emplacement physique des datacenters : datacenter primaire et secondaire, certifications (ISO27001, HDS), sous-traitants éventuels hors France ?"
+    },
+    {
+      "id": "archiving_nf_z42013",
+      "category": "compliance",
+      "name": "Archivage probant NF Z 42-013",
+      "description": "Module d'archivage électronique probant conforme NF Z 42-013, conservation 10 ans minimum",
+      "weight_default": 7,
+      "is_eliminatory": false,
+      "coverage_key": "archivage_10ans",
+      "rfi_question_template": "Votre module d'archivage est-il certifié NF Z 42-013 ? Durée de conservation garantie ? Accès aux archives après résiliation du contrat ?"
+    },
+    {
+      "id": "chorus_pro_connector",
+      "category": "compliance",
+      "name": "Connecteur Chorus Pro",
+      "description": "Intégration native avec Chorus Pro pour la facturation vers le secteur public (B2G)",
+      "weight_default": 7,
+      "is_eliminatory": false,
+      "coverage_key": "b2g_chorus",
+      "rfi_question_template": "Décrivez le connecteur Chorus Pro : flux supportés (dépôt, réception, statuts), versions Chorus supportées, cas Chorus Pro V2 si applicable ?"
+    },
+    {
+      "id": "iso27001",
+      "category": "compliance",
+      "name": "ISO 27001",
+      "description": "Certification ISO 27001 sur le périmètre de la solution de facturation électronique",
+      "weight_default": 6,
+      "is_eliminatory": false,
+      "coverage_key": "iso27001",
+      "rfi_question_template": "Confirmez la certification ISO 27001 : périmètre certifié, date de dernière audit, organisme certificateur, prochaine échéance de renouvellement ?"
+    },
+    {
+      "id": "erp_sap_native",
+      "category": "technical",
+      "name": "Intégration SAP native",
+      "description": "Connecteur certifié natif avec SAP (S/4HANA, ECC) — émis et reçus",
+      "weight_default": 6,
+      "is_eliminatory": false,
+      "coverage_key": null,
+      "rfi_question_template": "Décrivez l'intégration SAP : connecteur natif ou API, versions SAP supportées (ECC, S/4HANA On-Premise, S/4HANA Cloud), périmètre (émis + reçus + avoirs), documentation technique disponible ?"
+    },
+    {
+      "id": "erp_sage_native",
+      "category": "technical",
+      "name": "Intégration Sage native",
+      "description": "Connecteur certifié natif avec Sage (X3, 100, 50) — émis et reçus",
+      "weight_default": 6,
+      "is_eliminatory": false,
+      "coverage_key": null,
+      "rfi_question_template": "Décrivez l'intégration Sage : connecteur natif ou API, versions Sage supportées (X3, 100, 50), périmètre (émis + reçus + avoirs) ?"
+    },
+    {
+      "id": "erp_cegid_native",
+      "category": "technical",
+      "name": "Intégration Cegid native",
+      "description": "Connecteur certifié natif avec Cegid (XRP Flex, Loop, Quadra) — émis et reçus",
+      "weight_default": 6,
+      "is_eliminatory": false,
+      "coverage_key": null,
+      "rfi_question_template": "Décrivez l'intégration Cegid : connecteur natif ou API, versions Cegid supportées (XRP Flex, Loop, Quadra), périmètre (émis + reçus + avoirs) ?"
+    },
+    {
+      "id": "peppol_support",
+      "category": "compliance",
+      "name": "Support PEPPOL",
+      "description": "Point d'accès PEPPOL certifié (émission et réception PEPPOL BIS 3.0)",
+      "weight_default": 5,
+      "is_eliminatory": false,
+      "coverage_key": "peppol",
+      "rfi_question_template": "Êtes-vous access point PEPPOL certifié ? Périmètre (émission seule, réception, les deux) ? Versions PEPPOL BIS supportées ?"
+    },
+    {
+      "id": "api_rest",
+      "category": "technical",
+      "name": "API REST",
+      "description": "API REST documentée pour intégration custom (webhooks, push/pull, gestion des statuts)",
+      "weight_default": 5,
+      "is_eliminatory": false,
+      "coverage_key": "api_rest",
+      "rfi_question_template": "Documentation API REST disponible publiquement ? Authentification (OAuth2, clé API) ? Webhooks pour les changements de statut ? SLA API (disponibilité, limites de débit) ?"
+    },
+    {
+      "id": "support_fr",
+      "category": "support",
+      "name": "Support francophone",
+      "description": "Support client en français, équipes basées en France, SLA défini",
+      "weight_default": 5,
+      "is_eliminatory": false,
+      "coverage_key": "support_fr",
+      "rfi_question_template": "Organisation du support : équipe FR dédiée ou mutualisée ? Horaires ? SLA de résolution (P1/P2/P3) ? Canal préférentiel (ticketing, téléphone, chat) ? CSM dédié ?"
+    },
+    {
+      "id": "edi_support",
+      "category": "technical",
+      "name": "Support EDI",
+      "description": "Support des formats EDI (EDIFACT, ANSI X12, XML propriétaire) et traduction de messages",
+      "weight_default": 4,
+      "is_eliminatory": false,
+      "coverage_key": "edi_edifact",
+      "rfi_question_template": "Formats EDI supportés (EDIFACT, ANSI X12, XML) ? Capacité de mapping/traduction vers les formats PA ? Messages supportés (INVOIC, DESADV, ORDERS) ?"
+    }
+  ]
+}
