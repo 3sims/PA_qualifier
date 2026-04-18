@@ -106,6 +106,8 @@ export interface ClientProfile {
   enrichment_date: string;
   data_sources: string[];
   confidence_score: number;
+  /** true si le LLM a retourné une raison sociale incohérente avec le nom saisi */
+  hallucination_detected?: boolean;
 }
 
 /** Alerte contextuelle (7 Pièges) */

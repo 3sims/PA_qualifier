@@ -20,6 +20,8 @@ interface LLMCallOptions {
   user: string;
   maxTokens?: number;
   temperature?: number;
+  /** Timeout en ms — défaut 30 000 ms */
+  timeout?: number;
 }
 
 /**
@@ -40,11 +42,13 @@ export async function callLLM(options: LLMCallOptions): Promise<string> {
     );
   }
 
+  const timeoutMs = options.timeout ?? 30_000;
+
   if (provider === 'anthropic') {
-    return callAnthropic({ apiKey, model, maxTok, temp, ...options });
+    return callAnthropic({ apiKey, model, maxTok, temp, timeoutMs, ...options });
   }
   // Default: openai-compatible
-  return callOpenAI({ apiKey, model, maxTok, temp, ...options });
+  return callOpenAI({ apiKey, model, maxTok, temp, timeoutMs, ...options });
 }
 
 // ---------------------------------------------------------------------------
@@ -56,6 +60,7 @@ async function callOpenAI(opts: {
   model: string;
   maxTok: number;
   temp: number;
+  timeoutMs: number;
   system: string;
   user: string;
 }): Promise<string> {
@@ -72,7 +77,7 @@ async function callOpenAI(opts: {
   });
 
   const ctrl = new AbortController();
-  const timeout = setTimeout(() => ctrl.abort(), 30_000);
+  const timeout = setTimeout(() => ctrl.abort(), opts.timeoutMs);
 
   let res: Response;
   try {
@@ -114,6 +119,7 @@ async function callAnthropic(opts: {
   model: string;
   maxTok: number;
   temp: number;
+  timeoutMs: number;
   system: string;
   user: string;
 }): Promise<string> {
@@ -126,7 +132,7 @@ async function callAnthropic(opts: {
   });
 
   const ctrl = new AbortController();
-  const timeout = setTimeout(() => ctrl.abort(), 30_000);
+  const timeout = setTimeout(() => ctrl.abort(), opts.timeoutMs);
 
   let res: Response;
   try {

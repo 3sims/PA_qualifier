@@ -23,6 +23,7 @@ import {
   entitiesToSiretCount,
 } from '@/lib/lead-time';
 import { getAlertsForStep, getResultsAlerts } from '@/lib/alerts';
+import { canGenerateLivrable, type LivrablePhase } from '@/lib/livrable-pipeline';
 import { StepIndicator } from './StepIndicator';
 import { AlertBanner } from './AlertBanner';
 import { Step1Contexte } from './steps/Step1Contexte';
@@ -37,6 +38,7 @@ import { ViewModeToggle } from '../results/ViewModeToggle';
 import { ProjectTimeline } from '../results/ProjectTimeline';
 import { RiskMatrix } from '../results/RiskMatrix';
 import { DraftLivrablePanel } from '../livrables/DraftLivrablePanel';
+import { CodirFrame, type ScoringCriterion, type LeadTimeEstimationPA } from '../results/CodirFrame';
 import { ClientProfileCard } from '../onboarding/ClientProfileCard';
 
 const LS_KEY = 'pa_mission_current_v2';
@@ -108,7 +110,15 @@ export function WizardShell() {
   const [livrableP4, setLivrableP4]   = useState<string | null>(null);
   const [livrableP5, setLivrableP5]   = useState<string | null>(null);
   const [livrableP6, setLivrableP6]   = useState<string | null>(null);
-  const [livrableLoading, setLivrableLoading] = useState(false);
+  const [livrableLoadingPhase, setLivrableLoadingPhase] = useState<string | null>(null);
+  const [livrableErrors, setLivrableErrors]             = useState<Partial<Record<string, string>>>({});
+
+  // V2 — CODIR structured data (parsed from P4 JSON block or dedicated endpoint)
+  const [codirCriteria, setCodirCriteria] = useState<ScoringCriterion[]>([]);
+  const [codirLeadTime, setCodirLeadTime] = useState<LeadTimeEstimationPA[]>([]);
+  const [codirClauses,  setCodirClauses]  = useState<string[]>([]);
+  const [codirLoading,  setCodirLoading]  = useState(false);
+  const [codirError,    setCodirError]    = useState<string | null>(null);
 
   // V2 — Use cases
   const [useCaseIds, setUseCaseIds]           = useState<string[]>([]);
@@ -300,19 +310,116 @@ export function WizardShell() {
     setCustomUseCases((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  // ---- Generate livrable
+  // ---- Parse CODIR structured data from P4 JSON block
+  const parseCodirFromP4 = useCallback((content: string) => {
+    try {
+      const match = content.match(/```json\s*([\s\S]*?)```/);
+      if (!match) return;
+      const data = JSON.parse(match[1].trim()) as {
+        scoring_criteria?: Array<{ label: string; weight: number; scores: Record<string, number> }>;
+        lead_time_data?: Array<{ pa_name: string; scenario: string; min_weeks: number; max_weeks: number }>;
+        contract_clauses?: string[];
+      };
+      if (Array.isArray(data.scoring_criteria) && data.scoring_criteria.length > 0) {
+        setCodirCriteria(data.scoring_criteria.map((c) => ({
+          label:  String(c.label),
+          weight: Number(c.weight),
+          scores: Object.fromEntries(
+            Object.entries(c.scores ?? {}).map(([k, v]) => [k, Number(v)])
+          ),
+        })));
+      }
+      if (Array.isArray(data.lead_time_data) && data.lead_time_data.length > 0) {
+        setCodirLeadTime(data.lead_time_data.map((lt) => ({
+          pa_name:   String(lt.pa_name),
+          scenario:  (['native', 'api', 'custom'].includes(lt.scenario)
+            ? lt.scenario : 'api') as 'native' | 'api' | 'custom',
+          min_weeks: Number(lt.min_weeks),
+          max_weeks: Number(lt.max_weeks),
+        })));
+      }
+      if (Array.isArray(data.contract_clauses) && data.contract_clauses.length > 0) {
+        setCodirClauses(data.contract_clauses.map(String));
+      }
+    } catch { /* ignore malformed JSON */ }
+  }, []);
+
+  // ---- Generate CODIR scoring grid (dedicated endpoint)
+  const handleGenerateCodir = useCallback(async () => {
+    if (!result) return;
+    setCodirLoading(true);
+    setCodirError(null);
+    try {
+      const res = await fetch('/api/generate-codir', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          shortlisted_pas: result.shortlist.map((e) => e.pa_name),
+          eliminated_pas:  eliminatedClientPAs,
+          client_name:     mission?.client_name,
+          wizard_answers:  mission?.answers,
+          p1_validated:    livrableP1 ?? undefined,
+          p2_validated:    livrableP2 ?? undefined,
+          p3_validated:    livrableP3 ?? undefined,
+          p4_validated:    livrableP4 ?? undefined,
+          p5_validated:    livrableP5 ?? undefined,
+        }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          scoring_criteria?: Array<{ label: string; weight: number; scores: Record<string, number> }>;
+          lead_time_data?:   Array<{ pa_name: string; scenario: string; min_weeks: number; max_weeks: number }>;
+          contract_clauses?: string[];
+          error?: string;
+        };
+        if (data.error) {
+          setCodirError(data.error);
+          return;
+        }
+        if (Array.isArray(data.scoring_criteria) && data.scoring_criteria.length > 0) {
+          setCodirCriteria(data.scoring_criteria.map((c) => ({
+            label:  String(c.label),
+            weight: Number(c.weight),
+            scores: Object.fromEntries(
+              Object.entries(c.scores ?? {}).map(([k, v]) => [k, Number(v)])
+            ),
+          })));
+        }
+        if (Array.isArray(data.lead_time_data) && data.lead_time_data.length > 0) {
+          setCodirLeadTime(data.lead_time_data.map((lt) => ({
+            pa_name:   String(lt.pa_name),
+            scenario:  (['native', 'api', 'custom'].includes(lt.scenario)
+              ? lt.scenario : 'api') as 'native' | 'api' | 'custom',
+            min_weeks: Number(lt.min_weeks),
+            max_weeks: Number(lt.max_weeks),
+          })));
+        }
+        if (Array.isArray(data.contract_clauses) && data.contract_clauses.length > 0) {
+          setCodirClauses(data.contract_clauses.map(String));
+        }
+      } else {
+        const errData = await res.json().catch(() => ({ error: `Erreur ${res.status}` })) as { error?: string };
+        setCodirError(errData.error ?? `Erreur ${res.status}`);
+      }
+    } catch {
+      setCodirError('Erreur réseau — réessayez');
+    } finally {
+      setCodirLoading(false);
+    }
+  }, [result, eliminatedClientPAs, mission, livrableP1, livrableP2, livrableP3, livrableP4, livrableP5]);
+
+  // ---- Generate livrable (pipeline incrémental)
   const handleGenerateLivrable = async (
     phase: 'p1_discovery' | 'p2_gap' | 'p3_rfi' | 'p4_scoring' | 'p5_risks' | 'p6_roadmap'
   ) => {
     if (!mission) return;
-    setLivrableLoading(true);
+    setLivrableLoadingPhase(phase);
+    setLivrableErrors((prev) => { const next = { ...prev }; delete next[phase]; return next; });
+    const lt = result
+      ? { min_weeks: result.lead_time_min, max_weeks: result.lead_time_max, scenario: result.lead_time_scenario ?? 'native' as const, assumption: '' }
+      : { min_weeks: 12, max_weeks: 20, scenario: 'native' as const, assumption: '' };
     const activeAlerts = result
-      ? getResultsAlerts(mission.answers, {
-          min_weeks: result.lead_time_min,
-          max_weeks: result.lead_time_max,
-          scenario: 'native',
-          assumption: '',
-        }).map((a) => ({ title: a.title, message: a.message }))
+      ? getResultsAlerts(mission.answers, lt).map((a) => ({ title: a.title, message: a.message }))
       : [];
     try {
       const res = await fetch('/api/generate-livrable', {
@@ -320,17 +427,24 @@ export function WizardShell() {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
           phase,
-          wizard_answers:    mission.answers,
-          client_name:       mission.client_name,
-          client_profile:    clientProfile ?? undefined,
-          shortlisted_pas:   result?.shortlist.map((e) => e.pa_name) ?? [],
-          eliminated_pas:    eliminatedClientPAs,
-          active_alerts:     activeAlerts,
+          wizard_answers:     mission.answers,
+          client_name:        mission.client_name,
+          client_profile:     clientProfile ?? undefined,
+          shortlisted_pas:    result?.shortlist.map((e) => e.pa_name) ?? [],
+          eliminated_pas:     eliminatedClientPAs,
+          active_alerts:      activeAlerts,
           context_supplement: contextSupplement || undefined,
-          lead_time_min:     result?.lead_time_min,
-          lead_time_max:     result?.lead_time_max,
-          complexity_band:   result?.complexity_band,
-          deadline:          mission.answers.deadline,
+          lead_time_min:      result?.lead_time_min,
+          lead_time_max:      result?.lead_time_max,
+          complexity_band:    result?.complexity_band,
+          deadline:           mission.answers.deadline,
+          use_cases:          { selected_ids: useCaseIds, custom: customUseCases },
+          // Pipeline incrémental — livrables validés des phases précédentes
+          p1_validated: livrableP1 ?? undefined,
+          p2_validated: livrableP2 ?? undefined,
+          p3_validated: livrableP3 ?? undefined,
+          p4_validated: livrableP4 ?? undefined,
+          p5_validated: livrableP5 ?? undefined,
         }),
       });
       if (res.ok) {
@@ -339,13 +453,20 @@ export function WizardShell() {
           case 'p1_discovery': setLivrableP1(data.content); break;
           case 'p2_gap':       setLivrableP2(data.content); break;
           case 'p3_rfi':       setLivrableP3(data.content); break;
-          case 'p4_scoring':   setLivrableP4(data.content); break;
+          case 'p4_scoring':   setLivrableP4(data.content); parseCodirFromP4(data.content); break;
           case 'p5_risks':     setLivrableP5(data.content); break;
           case 'p6_roadmap':   setLivrableP6(data.content); break;
         }
+      } else {
+        const errData = await res.json().catch(() => ({ error: `Erreur ${res.status}` })) as { error?: string };
+        console.error('[generate-livrable] API error', res.status, errData);
+        setLivrableErrors((prev) => ({ ...prev, [phase]: errData.error ?? `Erreur ${res.status}` }));
       }
-    } catch { /* ignore */ }
-    finally { setLivrableLoading(false); }
+    } catch (e) {
+      console.error('[generate-livrable] fetch error', e);
+      setLivrableErrors((prev) => ({ ...prev, [phase]: 'Erreur réseau — réessayez' }));
+    }
+    finally { setLivrableLoadingPhase(null); }
   };
 
   // ---- Fetch risks & roadmap after analyze
@@ -612,9 +733,13 @@ export function WizardShell() {
             loading={profileLoading}
             llmUnavailable={profileLLMUnavailable}
             llmMessage={profileLLMMessage}
+            companyName={clientName}
             onConfirm={handleStartMission}
             onSkip={handleStartMission}
             onFieldUpdate={() => undefined}
+            onProfileUpdate={(partial) =>
+              setClientProfile((prev) => prev ? { ...prev, ...partial } : null)
+            }
           />
         )}
 
@@ -797,62 +922,89 @@ export function WizardShell() {
         {/* Livrables */}
         <div className="mt-8">
           <h2 className="mb-3 text-lg font-bold text-slate-900">Livrables</h2>
-          <div className="space-y-4">
-            <DraftLivrablePanel
-              phase="p1_discovery"
-              phaseName="Phase 1 — Discovery"
-              livrableName="Cartographie des flux de facturation"
-              content={livrableP1}
-              onValidate={(c) => setLivrableP1(c)}
-              onRegenerate={() => handleGenerateLivrable('p1_discovery')}
-              loading={livrableLoading && !livrableP1}
-            />
-            <DraftLivrablePanel
-              phase="p2_gap"
-              phaseName="Phase 2 — Gap Analysis"
-              livrableName="Matrice de couverture PA"
-              content={livrableP2}
-              onValidate={(c) => setLivrableP2(c)}
-              onRegenerate={() => handleGenerateLivrable('p2_gap')}
-              loading={livrableLoading && !livrableP2}
-            />
-            <DraftLivrablePanel
-              phase="p3_rfi"
-              phaseName="Phase 3 — RFI Ciblé"
-              livrableName="Tableau RFI par PA (questions contractualisables)"
-              content={livrableP3}
-              onValidate={(c) => setLivrableP3(c)}
-              onRegenerate={() => handleGenerateLivrable('p3_rfi')}
-              loading={livrableLoading && !livrableP3}
-            />
-            <DraftLivrablePanel
-              phase="p4_scoring"
-              phaseName="Phase 4 — Scoring CODIR"
-              livrableName="Grille de scoring pondérée + Recommandation CODIR"
-              content={livrableP4}
-              onValidate={(c) => setLivrableP4(c)}
-              onRegenerate={() => handleGenerateLivrable('p4_scoring')}
-              loading={livrableLoading && !livrableP4}
-            />
-            <DraftLivrablePanel
-              phase="p5_risks"
-              phaseName="Phase 5 — Points de vigilance"
-              livrableName="7 Pièges actifs + Risques spécifiques au profil"
-              content={livrableP5}
-              onValidate={(c) => setLivrableP5(c)}
-              onRegenerate={() => handleGenerateLivrable('p5_risks')}
-              loading={livrableLoading && !livrableP5}
-            />
-            <DraftLivrablePanel
-              phase="p6_roadmap"
-              phaseName="Phase 6 — Roadmap"
-              livrableName="Séquençage recommandé — De l'atelier au go-live"
-              content={livrableP6}
-              onValidate={(c) => setLivrableP6(c)}
-              onRegenerate={() => handleGenerateLivrable('p6_roadmap')}
-              loading={livrableLoading && !livrableP6}
-            />
-          </div>
+          {(() => {
+            // Map courts des livrables validés pour canGenerateLivrable
+            const validatedMap: Record<string, string | null> = {
+              p1: livrableP1, p2: livrableP2, p3: livrableP3,
+              p4: livrableP4, p5: livrableP5, p6: livrableP6,
+            };
+            const phaseDefs: Array<{
+              phase: LivrablePhase;
+              phaseName: string;
+              livrableName: string;
+              content: string | null;
+              onValidate: (c: string) => void;
+            }> = [
+              { phase: 'p1_discovery', phaseName: 'Phase 1 — Discovery',        livrableName: 'Cartographie des flux de facturation',          content: livrableP1, onValidate: (c) => setLivrableP1(c) },
+              { phase: 'p2_gap',       phaseName: 'Phase 2 — Gap Analysis',      livrableName: 'Matrice de couverture PA',                      content: livrableP2, onValidate: (c) => setLivrableP2(c) },
+              { phase: 'p3_rfi',       phaseName: 'Phase 3 — RFI Ciblé',         livrableName: 'Tableau RFI par PA (questions contractualisables)', content: livrableP3, onValidate: (c) => setLivrableP3(c) },
+              { phase: 'p4_scoring',   phaseName: 'Phase 4 — Scoring CODIR',     livrableName: 'Grille de scoring pondérée + Recommandation CODIR', content: livrableP4, onValidate: (c) => { setLivrableP4(c); parseCodirFromP4(c); } },
+              { phase: 'p5_risks',     phaseName: 'Phase 5 — Points de vigilance', livrableName: '7 Pièges actifs + Risques spécifiques au profil', content: livrableP5, onValidate: (c) => setLivrableP5(c) },
+              { phase: 'p6_roadmap',   phaseName: 'Phase 6 — Roadmap',           livrableName: 'Séquençage recommandé — De l\'atelier au go-live', content: livrableP6, onValidate: (c) => setLivrableP6(c) },
+            ];
+            return (
+              <div className="space-y-4">
+                {phaseDefs.map(({ phase, phaseName, livrableName, content, onValidate }) => {
+                  const unlocked = canGenerateLivrable(phase, validatedMap);
+                  if (!unlocked) {
+                    return (
+                      <div key={phase} className="rounded-xl border border-slate-200 bg-slate-50 p-4 opacity-60">
+                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                          <span>🔒</span>
+                          <span className="font-medium">{phaseName} — {livrableName}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-400">
+                          Validez le livrable précédent pour débloquer cette phase.
+                        </p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <DraftLivrablePanel
+                      key={phase}
+                      phase={phase}
+                      phaseName={phaseName}
+                      livrableName={livrableName}
+                      content={content}
+                      onValidate={onValidate}
+                      onRegenerate={() => handleGenerateLivrable(phase)}
+                      loading={livrableLoadingPhase === phase}
+                      error={livrableErrors[phase]}
+                    />
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Restitution CODIR interactive — toujours visible sur la page résultats */}
+        <div className="mt-8">
+          <h2 className="mb-3 text-lg font-bold text-slate-900">Restitution CODIR interactive</h2>
+          <CodirFrame
+            shortlistedPAs={result.shortlist.map((entry) => ({
+              id: entry.pa_id,
+              name: entry.pa_name,
+              pa_source: (entry.pa_source ??
+                (clientPAShortlist.some((n) => n.toLowerCase() === entry.pa_name.toLowerCase())
+                  ? 'both'
+                  : 'app')) as import('@/lib/types').PASource,
+              status: 'unknown' as const,
+              data_hosting: 'FRANCE' as const,
+              lead_time_weeks_min: null,
+              lead_time_weeks_max: null,
+              erp_integrations: [],
+              coverage: {} as import('@/lib/types').PAV2Coverage,
+              last_updated: null,
+            }))}
+            scoringCriteria={codirCriteria}
+            leadTimeData={codirLeadTime}
+            contractClauses={codirClauses}
+            livrableP4Content={livrableP4}
+            onGenerate={handleGenerateCodir}
+            isGenerating={codirLoading}
+            generateError={codirError}
+          />
         </div>
 
         <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-6">

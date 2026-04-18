@@ -30,8 +30,8 @@ import {
 } from '@/lib/gap-analysis';
 import { buildPAContext, selectRelevantPAs } from '@/lib/pa-selector';
 import { calculateProgress } from '@/services/questionnaire';
-import type { PAProfile, FeatureCatalogItem } from '@/lib/types';
-import paSeed from '@/data/pa-seed-v1.json';
+import { paRepository } from '@/lib/pa-repository';
+import type { FeatureCatalogItem } from '@/lib/types';
 import featuresCatalog from '@/data/features-catalog.json';
 
 const AnalyzeSchema = z.object({
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     const leadMin = Math.max(ltRaw.min_weeks, 12);
     const leadMax = ltRaw.max_weeks;
 
-    const paProfiles = (paSeed as { pa_profiles: PAProfile[] }).pa_profiles;
+    const paProfiles = await paRepository.findAll();
     const features = (featuresCatalog as { features: FeatureCatalogItem[] }).features;
     const clientShortlist = parsed.data.client_pa_shortlist ?? [];
 

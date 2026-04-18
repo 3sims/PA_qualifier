@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { ClientProfile } from '@/lib/types';
 
 interface ClientProfileCardProps {
@@ -7,16 +8,18 @@ interface ClientProfileCardProps {
   loading?: boolean;
   llmUnavailable?: boolean;
   llmMessage?: string;
+  companyName?: string;
   onConfirm: () => void;
   onSkip: () => void;
   onFieldUpdate: (field: keyof ClientProfile, value: unknown) => void;
+  onProfileUpdate?: (partial: Partial<ClientProfile>) => void;
 }
 
 function ConfirmBadge({ fields, all }: { fields: string[]; all: string[] }) {
   if (fields.length === 0 || all.length === 0) return null;
   return (
     <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-      ⚠️ À confirmer
+      À confirmer
     </span>
   );
 }
@@ -38,9 +41,34 @@ export function ClientProfileCard({
   loading = false,
   llmUnavailable = false,
   llmMessage,
+  companyName,
   onConfirm,
   onSkip,
+  onProfileUpdate,
 }: ClientProfileCardProps) {
+  const [pappersLoading, setPappersLoading] = useState(false);
+  const [pappersMessage, setPappersMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handlePappersSearch = async () => {
+    if (!companyName || !onProfileUpdate) return;
+    setPappersLoading(true);
+    setPappersMessage(null);
+    try {
+      const res = await fetch(`/api/enrich-pappers?q=${encodeURIComponent(companyName)}`);
+      const data = await res.json() as { found: boolean; profile?: Partial<ClientProfile>; message?: string; error?: string };
+      if (data.found && data.profile) {
+        onProfileUpdate(data.profile);
+        setPappersMessage({ type: 'success', text: 'Profil enrichi depuis Pappers.fr' });
+      } else {
+        setPappersMessage({ type: 'error', text: data.message ?? 'Entreprise non trouvée sur Pappers' });
+      }
+    } catch {
+      setPappersMessage({ type: 'error', text: 'Erreur réseau Pappers' });
+    } finally {
+      setPappersLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm mt-4">
@@ -72,14 +100,52 @@ export function ClientProfileCard({
             </p>
           )}
         </div>
-        {fieldsToConfirm.size > 0 && (
-          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
-            {fieldsToConfirm.size} champs à confirmer
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {fieldsToConfirm.size > 0 && (
+            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+              {fieldsToConfirm.size} champs à confirmer
+            </span>
+          )}
+        </div>
       </div>
 
-      <div className="px-5 py-4 space-y-5">
+      <div className="px-5 py-4 space-y-4">
+
+        {/* Bannière hallucination */}
+        {profile.hallucination_detected && (
+          <div className="rounded-lg border border-orange-300 bg-orange-50 p-3">
+            <p className="text-sm font-medium text-orange-800">
+              ⚠️ Enrichissement automatique incertain pour &ldquo;{companyName ?? profile.legal_name}&rdquo;
+            </p>
+            <p className="mt-1 text-xs text-orange-700">
+              Les données légales n'ont pas pu être confirmées automatiquement.
+              Complétez les champs manuellement ou utilisez Pappers ci-dessous.
+            </p>
+          </div>
+        )}
+
+        {/* Bouton Pappers + feedback */}
+        {companyName && onProfileUpdate && (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handlePappersSearch}
+              disabled={pappersLoading}
+              className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+            >
+              {pappersLoading
+                ? <><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" /> Recherche…</>
+                : <>🔍 Enrichir depuis Pappers.fr</>
+              }
+            </button>
+            {pappersMessage && (
+              <span className={`text-xs ${pappersMessage.type === 'success' ? 'text-green-700' : 'text-red-600'}`}>
+                {pappersMessage.type === 'success' ? '✓' : '✗'} {pappersMessage.text}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Bloc 1 — Données légales */}
         <div>
           <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">

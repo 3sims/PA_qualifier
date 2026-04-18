@@ -106,6 +106,37 @@ export function filterQuestionsForProfile(
   });
 }
 
+// ---------------------------------------------------------------------------
+// EXTRACTION DEPUIS LE CONTEXTE CONSULTANT
+// ---------------------------------------------------------------------------
+
+/**
+ * Patterns heuristiques pour détecter des réponses dans le contexte libre
+ * du consultant. Retourne la valeur extraite ou null.
+ */
+const CONTEXT_PATTERNS: Partial<Record<keyof DiscoveryAnswers, RegExp>> = {
+  erp_main:               /\b(sap|sage|cegid|dynamics|oracle|netsuite|divalto|ciel|pennylane|quadratus|ibiza)\b/i,
+  has_b2g:                /\bchorus(?:\s*pro)?\b|\bsecteur public\b|\bcollectivit|\bfacturation\s*publique\b/i,
+  deadline:               /\b(septembre|sept\.?)\s*202[67]\b|\b1er\s+sept/i,
+  benchmark_last_updated: /\b([3-9]|[1-9]\d)\s*ans?\s*de\s*benchmark\b|\bbenchmark.*20(20|21|22|23)\b/i,
+  has_avoirs:             /\bavoirs?\b|\bnotes?\s*de\s*crédit\b/i,
+};
+
+/**
+ * Tente d'extraire une réponse à un champ donné depuis le contexte libre
+ * du consultant. Retourne la valeur brute extraite, ou null si non trouvée.
+ */
+export function extractAnswerFromContext(
+  field: keyof DiscoveryAnswers,
+  contextSupplement: string
+): string | null {
+  if (!contextSupplement) return null;
+  const pattern = CONTEXT_PATTERNS[field];
+  if (!pattern) return null;
+  const match = contextSupplement.match(pattern);
+  return match ? match[0] : null;
+}
+
 /**
  * Retourne les questions Discovery Phase 1 adaptées au profil.
  * Inclut le nombre d'établissements dans la question multi-sites si disponible.

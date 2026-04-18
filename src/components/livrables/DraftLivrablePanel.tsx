@@ -13,6 +13,8 @@ interface DraftLivrablePanelProps {
   /** Callback pour régénérer via LLM */
   onRegenerate: () => Promise<void>;
   loading?: boolean;
+  /** Message d'erreur à afficher si la génération a échoué */
+  error?: string;
 }
 
 export function DraftLivrablePanel({
@@ -23,6 +25,7 @@ export function DraftLivrablePanel({
   onValidate,
   onRegenerate,
   loading = false,
+  error,
 }: DraftLivrablePanelProps) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(content ?? '');
@@ -77,15 +80,21 @@ export function DraftLivrablePanel({
       </div>
 
       <div className="p-4">
+        {error && (
+          <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+            ⚠️ Échec de génération : {error}
+          </div>
+        )}
+
         {!content && !loading && (
           <div className="py-6 text-center text-sm text-slate-500">
-            <p className="mb-3">Le livrable n'a pas encore été généré.</p>
+            <p className="mb-3">{error ? 'La génération a échoué. Réessayez.' : 'Le livrable n\'a pas encore été généré.'}</p>
             <button
               type="button"
               onClick={handleRegenerate}
               className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600"
             >
-              ✨ Générer le draft
+              {error ? '🔄 Réessayer' : '✨ Générer le draft'}
             </button>
           </div>
         )}
