@@ -44,7 +44,6 @@ import { ClientProfileCard } from '../onboarding/ClientProfileCard';
 const LS_KEY = 'pa_mission_current_v2';
 const SS_VIEW_MODE = 'pa_view_mode';
 const AUTOSAVE_INTERVAL_MS = 30_000;
-const ENRICH_DEBOUNCE_MS = 800;
 
 interface LocalState {
   mission: Mission | null;
@@ -79,6 +78,77 @@ interface Roadmap {
   alerte_chemin_critique: string | null;
 }
 
+// ---------------------------------------------------------------------------
+// Conflict detection (pure, outside component)
+// ---------------------------------------------------------------------------
+
+function detectContextConflicts(
+  ctx: string,
+  profile: ClientProfile
+): Array<{ field: string; manual: string; api: string }> {
+  const conflicts: Array<{ field: string; manual: string; api: string }> = [];
+
+  // 1. Regulatory category mismatch
+  const catPatterns: Array<[string, RegExp]> = [
+    ['GE',  /\b(grand[e]?\s*entreprise|très\s*grande?\s*entreprise|cac\s*40|cac40|groupe\s*international)\b/i],
+    ['ETI', /\beti\b/i],
+    ['PME', /\bpme\b/i],
+    ['TPE', /\btpe\b|\btrès\s*petite\s*entreprise\b/i],
+  ];
+  if (profile.regulatory_category) {
+    for (const [cat, re] of catPatterns) {
+      if (re.test(ctx) && cat !== profile.regulatory_category) {
+        conflicts.push({
+          field: 'Catégorie réglementaire',
+          manual: `"${cat}" mentionné dans votre contexte`,
+          api: `Données web : catégorie "${profile.regulatory_category}"`,
+        });
+        break;
+      }
+    }
+  }
+
+  // 2. Deadline year mismatch
+  const yearMatches = ctx.match(/\b(202[5-9]|2030)\b/g);
+  if (yearMatches && profile.emission_deadline) {
+    const apiYear = new Date(profile.emission_deadline).getFullYear().toString();
+    const uniqueYears = [...new Set(yearMatches)];
+    const conflictYear = uniqueYears.find((y) => y !== apiYear);
+    if (conflictYear) {
+      conflicts.push({
+        field: 'Échéance deadline',
+        manual: `Année ${conflictYear} citée dans votre contexte`,
+        api: `Deadline d'émission réglementaire : ${profile.emission_deadline}`,
+      });
+    }
+  }
+
+  // 3. Sector mismatch (basic keyword check)
+  if (profile.sector_label) {
+    const apiSectorLower = profile.sector_label.toLowerCase();
+    const industrieRe = /\b(industri|manufactur|produit|usine|atelier)\b/i;
+    const serviceRe   = /\b(service|conseil|consulting|cabinet|agence)\b/i;
+    const commerceRe  = /\b(commerce|distribution|négoce|vente|retail)\b/i;
+    const checks: Array<[RegExp, RegExp]> = [
+      [industrieRe, serviceRe], [industrieRe, commerceRe],
+      [serviceRe, industrieRe], [serviceRe, commerceRe],
+      [commerceRe, industrieRe], [commerceRe, serviceRe],
+    ];
+    for (const [ctxRe, apiContraRe] of checks) {
+      if (ctxRe.test(ctx) && apiContraRe.test(apiSectorLower)) {
+        conflicts.push({
+          field: 'Secteur d\'activité',
+          manual: `Votre contexte évoque un secteur différent`,
+          api: `Données web : "${profile.sector_label}"`,
+        });
+        break;
+      }
+    }
+  }
+
+  return conflicts;
+}
+
 export function WizardShell() {
   const [mission, setMission]           = useState<Mission | null>(null);
   const [clientName, setClientName]     = useState('');
@@ -102,6 +172,8 @@ export function WizardShell() {
   const [profileLLMUnavailable, setProfileLLMUnavailable] = useState(false);
   const [profileLLMMessage, setProfileLLMMessage]         = useState<string | undefined>(undefined);
   const [profileVisible, setProfileVisible]     = useState(false);
+  const [lastEnrichedName, setLastEnrichedName] = useState<string | null>(null);
+  const [profileConflicts, setProfileConflicts] = useState<Array<{ field: string; manual: string; api: string }>>([]);
 
   // V2 — Livrables
   const [livrableP1, setLivrableP1]   = useState<string | null>(null);
@@ -135,7 +207,6 @@ export function WizardShell() {
 
   const missionRef = useRef<Mission | null>(null);
   missionRef.current = mission;
-  const enrichDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ---- Restore from localStorage
   useEffect(() => {
@@ -202,36 +273,45 @@ export function WizardShell() {
     try { sessionStorage.setItem(SS_VIEW_MODE, mode); } catch { /* ignore */ }
   };
 
-  // ---- Enrich client (debounced)
-  useEffect(() => {
-    if (!clientName.trim() || clientName.trim().length < 2) return;
-    if (enrichDebounceRef.current) clearTimeout(enrichDebounceRef.current);
-    enrichDebounceRef.current = setTimeout(async () => {
-      setProfileLoading(true);
+  // ---- Enrich client (manual, with dedup guard)
+  const handleEnrichClient = useCallback(async () => {
+    const name = clientName.trim();
+    if (!name || name.length < 2) return;
+
+    // Duplicate guard: same client name already enriched → no extra API call
+    if (name === lastEnrichedName && clientProfile) {
+      // Just re-show the card if hidden
       setProfileVisible(true);
-      try {
-        const res = await fetch('/api/enrich-client', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ company_name: clientName.trim(), context_supplement: contextSupplement }),
-        });
-        if (res.ok) {
-          const data = (await res.json()) as {
-            profile: ClientProfile;
-            llm_unavailable?: boolean;
-            message?: string;
-          };
-          setClientProfile(data.profile);
-          setProfileLLMUnavailable(data.llm_unavailable ?? false);
-          setProfileLLMMessage(data.message);
+      return;
+    }
+
+    setProfileLoading(true);
+    setProfileVisible(true);
+    setProfileConflicts([]);
+    try {
+      const res = await fetch('/api/enrich-client', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ company_name: name, context_supplement: contextSupplement }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          profile: ClientProfile;
+          llm_unavailable?: boolean;
+          message?: string;
+        };
+        setClientProfile(data.profile);
+        setProfileLLMUnavailable(data.llm_unavailable ?? false);
+        setProfileLLMMessage(data.message);
+        setLastEnrichedName(name);
+        // Detect contradictions between consultant context and API data
+        if (contextSupplement.trim() && !data.llm_unavailable) {
+          setProfileConflicts(detectContextConflicts(contextSupplement, data.profile));
         }
-      } catch { /* ignore */ }
-      finally { setProfileLoading(false); }
-    }, ENRICH_DEBOUNCE_MS);
-    return () => {
-      if (enrichDebounceRef.current) clearTimeout(enrichDebounceRef.current);
-    };
-  }, [clientName, contextSupplement]);
+      }
+    } catch { /* ignore network errors */ }
+    finally { setProfileLoading(false); }
+  }, [clientName, contextSupplement, lastEnrichedName, clientProfile]);
 
   // ---- Create mission
   const handleStartMission = async () => {
@@ -628,11 +708,14 @@ export function WizardShell() {
   // RENDER — Phase 0 (intro + enrichment)
   // ============================================================
   if (currentStep === 0 || !mission) {
+    const nameReady = clientName.trim().length >= 2;
+    const alreadyEnriched = nameReady && lastEnrichedName === clientName.trim() && !!clientProfile;
+
     return (
       <div className="mx-auto max-w-xl">
         <h1 className="mb-2 text-2xl font-bold text-slate-900">Nouvelle mission</h1>
         <p className="mb-6 text-sm text-slate-500">
-          Renseignez les informations de base — l'enrichissement du profil client se lance automatiquement.
+          Renseignez les informations de base, puis enrichissez le profil client via le bouton dédié.
         </p>
 
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
@@ -718,6 +801,58 @@ export function WizardShell() {
               </p>
             )}
           </div>
+
+          {/* ---- Enrichissement manuel ---- */}
+          <div className="border-t border-slate-100 pt-4">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleEnrichClient}
+                disabled={!nameReady || profileLoading}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {profileLoading ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Enrichissement en cours…
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                    </svg>
+                    Enrichir le profil client
+                  </>
+                )}
+              </button>
+
+              {alreadyEnriched && !profileLoading && (
+                <span className="flex items-center gap-1 text-xs text-green-700 font-medium">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Profil chargé
+                  <button
+                    type="button"
+                    onClick={() => { setLastEnrichedName(null); handleEnrichClient(); }}
+                    className="ml-1 underline text-slate-400 hover:text-slate-600"
+                  >
+                    Rafraîchir
+                  </button>
+                </span>
+              )}
+
+              {!nameReady && (
+                <span className="text-xs text-slate-400">Saisissez le nom du client pour activer</span>
+              )}
+            </div>
+            <p className="mt-1.5 text-xs text-slate-400">
+              Recherche web + IA · Un seul appel par client · Aucune donnée envoyée sans votre action
+            </p>
+          </div>
         </div>
 
         {/* Client profile card */}
@@ -738,24 +873,61 @@ export function WizardShell() {
             onSkip={handleStartMission}
             onFieldUpdate={() => undefined}
             onProfileUpdate={(partial) =>
-              setClientProfile((prev) => prev ? { ...prev, ...partial } : null)
+              setClientProfile((prev) => ({ ...(prev ?? {}), ...partial } as ClientProfile))
             }
           />
+        )}
+
+        {/* Contradictions panel */}
+        {profileConflicts.length > 0 && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div className="flex items-start gap-2 mb-3">
+              <svg className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <div>
+                <p className="text-sm font-semibold text-amber-800">
+                  {profileConflicts.length} contradiction{profileConflicts.length > 1 ? 's' : ''} détectée{profileConflicts.length > 1 ? 's' : ''}
+                </p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Des données du web divergent de votre contexte. Vérifiez et corrigez si nécessaire.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {profileConflicts.map((c, i) => (
+                <div key={i} className="rounded-lg bg-white border border-amber-200 p-3 text-xs">
+                  <div className="font-semibold text-amber-900 mb-1.5">{c.field}</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded bg-blue-50 border border-blue-200 px-2 py-1.5">
+                      <div className="text-[10px] font-bold text-blue-600 uppercase mb-0.5">Votre contexte</div>
+                      <div className="text-slate-700">{c.manual}</div>
+                    </div>
+                    <div className="rounded bg-slate-50 border border-slate-200 px-2 py-1.5">
+                      <div className="text-[10px] font-bold text-slate-500 uppercase mb-0.5">Données web</div>
+                      <div className="text-slate-700">{c.api}</div>
+                    </div>
+                  </div>
+                  <p className="mt-1.5 text-amber-700">
+                    Mettez à jour le champ <span className="font-medium">Contexte additionnel</span> si votre information est incorrecte, ou ignorez si la donnée web est erronée.
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {analyzeError && (
           <p className="mt-3 rounded-md bg-red-50 p-3 text-xs text-red-800">{analyzeError}</p>
         )}
 
-        {!profileVisible && (
-          <button
-            type="button"
-            onClick={handleStartMission}
-            className="mt-4 w-full rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-600"
-          >
-            Démarrer le questionnaire →
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleStartMission}
+          className="mt-4 w-full rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-600"
+        >
+          Démarrer le questionnaire →
+        </button>
       </div>
     );
   }

@@ -60,7 +60,7 @@ export function ClientProfileCard({
         onProfileUpdate(data.profile);
         setPappersMessage({ type: 'success', text: 'Profil enrichi depuis Pappers.fr' });
       } else {
-        setPappersMessage({ type: 'error', text: data.message ?? 'Entreprise non trouvée sur Pappers' });
+        setPappersMessage({ type: 'error', text: data.error ?? data.message ?? 'Entreprise non trouvée sur Pappers' });
       }
     } catch {
       setPappersMessage({ type: 'error', text: 'Erreur réseau Pappers' });
