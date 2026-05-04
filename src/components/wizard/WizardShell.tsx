@@ -45,6 +45,49 @@ const LS_KEY = 'pa_mission_current_v2';
 const SS_VIEW_MODE = 'pa_view_mode';
 const AUTOSAVE_INTERVAL_MS = 30_000;
 
+function resolveEntryPaSource(
+  entry: ShortlistEntry,
+  clientPAShortlist: string[]
+): PASource {
+  return (entry.pa_source ??
+    (clientPAShortlist.some((n) => n.toLowerCase() === entry.pa_name.toLowerCase())
+      ? 'both'
+      : 'app')) as PASource;
+}
+
+/** Anciennes réponses API sans `shortlist_pa_context` : repli minimal (même symptôme « ? » partiel). */
+function stubPaInContextFromEntry(
+  entry: ShortlistEntry,
+  clientPAShortlist: string[]
+): PAInContext {
+  return {
+    id: entry.pa_id,
+    name: entry.pa_name,
+    pa_source: resolveEntryPaSource(entry, clientPAShortlist),
+    status: 'unknown',
+    data_hosting: 'FRANCE',
+    lead_time_weeks_min: null,
+    lead_time_weeks_max: null,
+    erp_integrations: [],
+    coverage: {} as PAInContext['coverage'],
+    last_updated: null,
+  };
+}
+
+function paInContextOrderedForShortlist(
+  shortlist: ShortlistEntry[],
+  apiContext: PAInContext[] | undefined,
+  clientPAShortlist: string[]
+): PAInContext[] {
+  const byId = new Map((apiContext ?? []).map((p) => [p.id, p]));
+  return shortlist.map((entry) => {
+    const fromApi = byId.get(entry.pa_id);
+    const src = resolveEntryPaSource(entry, clientPAShortlist);
+    if (fromApi) return { ...fromApi, pa_source: src };
+    return stubPaInContextFromEntry(entry, clientPAShortlist);
+  });
+}
+
 interface LocalState {
   mission: Mission | null;
   clientName: string;
@@ -63,6 +106,7 @@ interface AnalyzeResult {
   lead_time_scenario?: 'native' | 'api' | 'custom';
   shortlist: ShortlistEntry[];
   eliminated_client_pas?: Array<{ name: string; reason: string }>;
+  shortlist_pa_context?: PAInContext[];
 }
 
 interface Jalon {
@@ -1024,23 +1068,11 @@ export function WizardShell() {
             <h2 className="mb-3 mt-8 text-lg font-bold text-slate-900">Matrice comparative</h2>
             <CoverageMatrix
               shortlist={result.shortlist}
-              paInContext={result.shortlist.map((entry) => ({
-                id: entry.pa_id,
-                name: entry.pa_name,
-                pa_source: (entry.pa_source ??
-                  (clientPAShortlist.some(
-                    (n) => n.toLowerCase() === entry.pa_name.toLowerCase()
-                  )
-                    ? 'both'
-                    : 'app')) as PASource,
-                status: 'unknown' as const,
-                data_hosting: 'FRANCE' as const,
-                lead_time_weeks_min: null,
-                lead_time_weeks_max: null,
-                erp_integrations: [],
-                coverage: {} as PAInContext['coverage'],
-                last_updated: null,
-              }))}
+              paInContext={paInContextOrderedForShortlist(
+                result.shortlist,
+                result.shortlist_pa_context,
+                clientPAShortlist
+              )}
               eliminatedPAs={eliminatedClientPAs.map((p) => ({
                 id: p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
                 name: p.name,
@@ -1154,21 +1186,11 @@ export function WizardShell() {
         <div className="mt-8">
           <h2 className="mb-3 text-lg font-bold text-slate-900">Restitution CODIR interactive</h2>
           <CodirFrame
-            shortlistedPAs={result.shortlist.map((entry) => ({
-              id: entry.pa_id,
-              name: entry.pa_name,
-              pa_source: (entry.pa_source ??
-                (clientPAShortlist.some((n) => n.toLowerCase() === entry.pa_name.toLowerCase())
-                  ? 'both'
-                  : 'app')) as import('@/lib/types').PASource,
-              status: 'unknown' as const,
-              data_hosting: 'FRANCE' as const,
-              lead_time_weeks_min: null,
-              lead_time_weeks_max: null,
-              erp_integrations: [],
-              coverage: {} as import('@/lib/types').PAV2Coverage,
-              last_updated: null,
-            }))}
+            shortlistedPAs={paInContextOrderedForShortlist(
+              result.shortlist,
+              result.shortlist_pa_context,
+              clientPAShortlist
+            )}
             scoringCriteria={codirCriteria}
             leadTimeData={codirLeadTime}
             contractClauses={codirClauses}

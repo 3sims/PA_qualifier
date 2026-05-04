@@ -28,7 +28,7 @@ import {
   runGapAnalysisV2,
   buildShortlistEntries,
 } from '@/lib/gap-analysis';
-import { buildPAContext, selectRelevantPAs } from '@/lib/pa-selector';
+import { buildPAContext, selectRelevantPAs, paInContextFromShortlist } from '@/lib/pa-selector';
 import { calculateProgress } from '@/services/questionnaire';
 import { paRepository } from '@/lib/pa-repository';
 import type { FeatureCatalogItem } from '@/lib/types';
@@ -124,6 +124,8 @@ export async function POST(request: NextRequest) {
     mission.updated_at = new Date().toISOString();
     await ServerMissionStore.save(mission);
 
+    const shortlist_pa_context = paInContextFromShortlist(shortlist, paProfiles);
+
     return NextResponse.json(
       {
         complexity_score: score,
@@ -132,6 +134,7 @@ export async function POST(request: NextRequest) {
         lead_time_max: leadMax,
         lead_time_scenario: ltRaw.scenario,
         shortlist,
+        shortlist_pa_context,
         eliminated_client_pas: eliminatedClientPAs,
       },
       { status: 200 }

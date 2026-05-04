@@ -58,6 +58,31 @@ export interface PAV2Coverage {
   api_rest_confidence?: ConfidenceLevel;
   support_fr?: CoverageLevel;
   support_fr_confidence?: ConfidenceLevel;
+  /** Colonnes PA enrichies (table Supabase) — scoring gap-analysis */
+  auth_2fa?: CoverageLevel;
+  auth_2fa_confidence?: ConfidenceLevel;
+  signature_electronique?: CoverageLevel;
+  signature_electronique_confidence?: ConfidenceLevel;
+  portail_fournisseur?: CoverageLevel;
+  portail_fournisseur_confidence?: ConfidenceLevel;
+  utilise_ia?: CoverageLevel;
+  utilise_ia_confidence?: ConfidenceLevel;
+  clients_flux2?: CoverageLevel;
+  clients_flux2_confidence?: ConfidenceLevel;
+  clients_flux3?: CoverageLevel;
+  clients_flux3_confidence?: ConfidenceLevel;
+  ereporting_b2c?: CoverageLevel;
+  ereporting_b2c_confidence?: ConfidenceLevel;
+  transfo_ereporting?: CoverageLevel;
+  transfo_ereporting_confidence?: ConfidenceLevel;
+  annuaire_prod?: CoverageLevel;
+  annuaire_prod_confidence?: ConfidenceLevel;
+  ocr_ia?: CoverageLevel;
+  ocr_ia_confidence?: ConfidenceLevel;
+  demo_disponible?: CoverageLevel;
+  demo_disponible_confidence?: ConfidenceLevel;
+  notes_de_frais?: CoverageLevel;
+  notes_de_frais_confidence?: ConfidenceLevel;
   // Index signature pour accès dynamique via feature key
   [key: string]: CoverageLevel | ConfidenceLevel | undefined;
 }
@@ -196,7 +221,7 @@ export interface WizardState {
 }
 
 // ---------------------------------------------------------------------------
-// DISCOVERY ANSWERS (23 questions)
+// DISCOVERY ANSWERS (questionnaire — voir questions.config)
 // ---------------------------------------------------------------------------
 
 export interface DiscoveryAnswers {
@@ -246,6 +271,12 @@ export interface DiscoveryAnswers {
   team_benchmark_participants?: string;
   benchmark_last_updated?: 'post_sept_2025' | 'partial' | 'pre_2025' | 'unknown';
   benchmark_validated_references?: string;
+  /** Exigences complémentaires — croisement avec colonnes PA enrichies */
+  has_b2c_activity?: 'yes' | 'no';
+  has_notes_de_frais?: 'yes' | 'no';
+  needs_2fa?: 'yes' | 'no';
+  needs_portail_fournisseur?: 'yes' | 'no';
+  needs_ocr_ia?: 'yes' | 'no';
 }
 
 // ---------------------------------------------------------------------------
@@ -347,6 +378,25 @@ export interface PAERPIntegration {
   confidence: FeatureConfidence;
 }
 
+/** Champs étendus issus de la table `pa` (hors matrice coverage) */
+export interface PAExtendedFields {
+  nb_employes_range?: string | null;
+  clients_references?: string | null;
+  workflow_validation?: string | null;
+  gestion_statuts?: string | null;
+  cas_usage_couverture?: string | null;
+  cas_usage_tiers?: string | null;
+  notes_de_frais_cu?: string | null;
+  autofacturation?: string | null;
+  configuration_initiale?: string | null;
+  marque_blanche?: boolean | null;
+  pme_friendly?: boolean | null;
+  frais_setup?: boolean | null;
+  offre_gratuite?: boolean | null;
+  tailles_cibles?: string | null;
+  secteurs_cibles?: string[] | null;
+}
+
 /** PAProfile V2 — format canonique du seed data */
 export interface PAProfile {
   id: string;
@@ -358,6 +408,8 @@ export interface PAProfile {
   erp_integrations: PAERPIntegrationV2[];
   coverage: PAV2Coverage;
   last_updated: string | null;
+  /** Données catalogue PA (Supabase) non converties en CoverageLevel */
+  extended?: PAExtendedFields;
   // Champs V1 optionnels (rétrocompatibilité)
   dgfip_id?: string;
   category?: PACategory;
@@ -430,7 +482,11 @@ export interface AnalyzeResponse {
   complexity_band: ComplexityBand;
   lead_time_min: number;
   lead_time_max: number;
+  lead_time_scenario?: 'native' | 'api' | 'custom';
   shortlist: ShortlistEntry[];
+  eliminated_client_pas?: Array<{ name: string; reason: string }>;
+  /** Profils PA (coverage) alignés sur `shortlist` — pour matrice / CODIR sans stubs vides */
+  shortlist_pa_context?: PAInContext[];
 }
 
 export interface ReportRequest {

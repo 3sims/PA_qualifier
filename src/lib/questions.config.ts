@@ -1,7 +1,7 @@
 /**
  * lib/questions.config.ts
  *
- * Configuration des 23 questions du questionnaire PA.
+ * Configuration du questionnaire PA (étapes 1 à 5).
  * SOURCE UNIQUE — toute modification de question se fait ici.
  */
 
@@ -332,6 +332,29 @@ export const QUESTIONNAIRE_CONFIG: QuestionnaireConfig = {
         { value: 'tbd', label: 'À analyser' },
       ],
     },
+    {
+      id: 'has_b2c_activity',
+      step: 3,
+      type: 'radio',
+      label: 'Avez-vous une activité B2C générant du e-reporting ?',
+      description: 'Ticket de caisse, factures B2C unitaires, données agrégées pour la fiscalité.',
+      required: true,
+      options: [
+        { value: 'yes', label: 'Oui' },
+        { value: 'no', label: 'Non' },
+      ],
+    },
+    {
+      id: 'has_notes_de_frais',
+      step: 3,
+      type: 'radio',
+      label: 'Gérez-vous des notes de frais ?',
+      required: true,
+      options: [
+        { value: 'yes', label: 'Oui' },
+        { value: 'no', label: 'Non' },
+      ],
+    },
 
     // STEP 4 — CONTRAINTES
     {
@@ -397,6 +420,39 @@ export const QUESTIONNAIRE_CONFIG: QuestionnaireConfig = {
         { value: 'dedicated', label: 'Équipe IT dédiée' },
         { value: 'partial', label: 'IT partielle' },
         { value: 'none', label: 'Aucune ressource IT interne' },
+      ],
+    },
+    {
+      id: 'needs_2fa',
+      step: 4,
+      type: 'radio',
+      label: 'La double authentification (MFA) est-elle obligatoire ?',
+      required: true,
+      options: [
+        { value: 'yes', label: 'Oui, exigence forte' },
+        { value: 'no', label: 'Non, pas d\'exigence' },
+      ],
+    },
+    {
+      id: 'needs_portail_fournisseur',
+      step: 4,
+      type: 'radio',
+      label: 'Avez-vous besoin d\'un portail fournisseur ?',
+      required: true,
+      options: [
+        { value: 'yes', label: 'Oui' },
+        { value: 'no', label: 'Non' },
+      ],
+    },
+    {
+      id: 'needs_ocr_ia',
+      step: 4,
+      type: 'radio',
+      label: 'Traitez-vous des documents entrants non structurés (PDF, scan) via OCR / IA ?',
+      required: true,
+      options: [
+        { value: 'yes', label: 'Oui, besoin identifié' },
+        { value: 'no', label: 'Non' },
       ],
     },
 

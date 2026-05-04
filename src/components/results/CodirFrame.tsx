@@ -49,6 +49,13 @@ const COVERAGE_COLOR: Record<CoverageLevel, string> = {
   '✗': 'text-red-700 bg-red-50',
 };
 
+const VALID_COVERAGE_LEVELS = new Set<string>(['✓', '~', '?', '✗']);
+
+function normalizeCoverageLevel(level: CoverageLevel | undefined): CoverageLevel {
+  if (level !== undefined && VALID_COVERAGE_LEVELS.has(level)) return level;
+  return '?';
+}
+
 const SCENARIO_LABELS: Record<string, string> = {
   native: 'Connecteur natif',
   api:    'Intégration API',
@@ -85,7 +92,7 @@ const TABS: Array<{ id: TabId; label: string }> = [
 // ---------------------------------------------------------------------------
 
 function CoverageCell({ level }: { level: CoverageLevel | undefined }) {
-  const l = level ?? '?';
+  const l = normalizeCoverageLevel(level);
   return (
     <span className={`inline-flex items-center justify-center w-7 h-7 rounded text-xs font-bold ${COVERAGE_COLOR[l]}`}>
       {COVERAGE_SYMBOL[l]}

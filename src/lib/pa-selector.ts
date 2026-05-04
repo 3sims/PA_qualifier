@@ -5,7 +5,7 @@
  * Stateless, pur. Aucun import React.
  */
 
-import type { PAProfile, PAInContext, PASource } from './types';
+import type { PAProfile, PAInContext, PASource, ShortlistEntry } from './types';
 
 // ---------------------------------------------------------------------------
 // HELPERS
@@ -47,12 +47,41 @@ function buildUnknownCoverage(): PAProfile['coverage'] {
     api_rest_confidence:     'unverified',
     support_fr:              '?',
     support_fr_confidence:   'unverified',
+    auth_2fa:                '?',
+    auth_2fa_confidence:     'unverified',
+    signature_electronique:  '?',
+    signature_electronique_confidence: 'unverified',
+    portail_fournisseur:     '?',
+    portail_fournisseur_confidence: 'unverified',
+    utilise_ia:              '?',
+    utilise_ia_confidence:   'unverified',
+    clients_flux2:           '?',
+    clients_flux2_confidence: 'unverified',
+    clients_flux3:           '?',
+    clients_flux3_confidence: 'unverified',
+    ereporting_b2c:          '?',
+    ereporting_b2c_confidence: 'unverified',
+    transfo_ereporting:      '?',
+    transfo_ereporting_confidence: 'unverified',
+    annuaire_prod:           '?',
+    annuaire_prod_confidence: 'unverified',
+    ocr_ia:                  '?',
+    ocr_ia_confidence:       'unverified',
+    demo_disponible:         '?',
+    demo_disponible_confidence: 'unverified',
+    notes_de_frais:        '?',
+    notes_de_frais_confidence: 'unverified',
   };
 }
 
-function createMinimalPAProfile(name: string, source: PASource): PAInContext {
+/** PA hors catalogue ou introuvable : couverture explicite en « ? » (pas d'objet vide). */
+export function minimalPAInContext(
+  id: string,
+  name: string,
+  source: PASource
+): PAInContext {
   return {
-    id: slugify(name),
+    id,
     name,
     status: 'unknown',
     data_hosting: 'FRANCE',
@@ -63,6 +92,31 @@ function createMinimalPAProfile(name: string, source: PASource): PAInContext {
     last_updated: null,
     pa_source: source,
   };
+}
+
+function createMinimalPAProfile(name: string, source: PASource): PAInContext {
+  return minimalPAInContext(slugify(name), name, source);
+}
+
+/**
+ * Reconstitue les PAInContext (coverage catalogue) alignés sur la shortlist,
+ * pour renvoi API / affichage matrice CODIR.
+ */
+export function paInContextFromShortlist(
+  shortlist: ShortlistEntry[],
+  paProfiles: PAProfile[]
+): PAInContext[] {
+  const byId = new Map(paProfiles.map((p) => [p.id, p]));
+  return shortlist.map((entry) => {
+    const source = (entry.pa_source ?? 'app') as PASource;
+    const base =
+      byId.get(entry.pa_id) ??
+      paProfiles.find(
+        (p) => p.name.toLowerCase() === entry.pa_name.toLowerCase().trim()
+      );
+    if (base) return { ...base, pa_source: source };
+    return minimalPAInContext(entry.pa_id, entry.pa_name, source);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -143,7 +197,8 @@ export function selectRelevantPAs(
  */
 export function needsRFI(pa: PAInContext): boolean {
   if (pa.status === 'unknown') return true;
-  const unknownCount = Object.entries(pa.coverage).filter(
+  const cov = pa.coverage ?? {};
+  const unknownCount = Object.entries(cov).filter(
     ([key, val]) => !key.endsWith('_confidence') && val === '?'
   ).length;
   return unknownCount >= 3;

@@ -73,6 +73,13 @@ export interface SupabasePARow {
   frais_setup?: boolean | null;
   offre_gratuite?: boolean | null;
   portail_fournisseur?: boolean | null;
+  clients_references_text?: string | null;
+  workflow_validation?: string | null;
+  gestion_statuts?: string | null;
+  cas_usage_couverture?: string | null;
+  cas_usage_tiers?: string | null;
+  notes_de_frais_cu?: string | null;
+  autofacturation_cu19b?: string | null;
   auth_double_facteur?: boolean | null;
   signature_electronique?: boolean | null;
   support_ereporting_b2c?: 'pas_agrege' | 'ticket_z_seulement' | 'factures_b2c_seulement' | 'toutes_sources' | null;

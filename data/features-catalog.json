@@ -129,6 +129,66 @@
       "is_eliminatory": false,
       "coverage_key": "edi_edifact",
       "rfi_question_template": "Formats EDI supportés (EDIFACT, ANSI X12, XML) ? Capacité de mapping/traduction vers les formats PA ? Messages supportés (INVOIC, DESADV, ORDERS) ?"
+    },
+    {
+      "id": "portail_fournisseur",
+      "category": "p2p",
+      "name": "Portail fournisseur",
+      "description": "Portail dédié aux fournisseurs pour le dépôt et le suivi des factures",
+      "weight_default": 6,
+      "is_eliminatory": false,
+      "coverage_key": "portail_fournisseur",
+      "rfi_question_template": "Disposez-vous d'un portail fournisseur ? Périmètre (dépôt, validation, statuts) ?"
+    },
+    {
+      "id": "auth_2fa",
+      "category": "compliance",
+      "name": "Authentification à double facteur",
+      "description": "MFA / 2FA disponible pour les comptes utilisateurs",
+      "weight_default": 5,
+      "is_eliminatory": false,
+      "coverage_key": "auth_2fa",
+      "rfi_question_template": "La double authentification (MFA) est-elle proposée ? Méthodes supportées (TOTP, SMS, SSO) ?"
+    },
+    {
+      "id": "clients_flux2",
+      "category": "compliance",
+      "name": "Clients en production flux 2",
+      "description": "Références clients déjà en production sur le flux 2 (réception)",
+      "weight_default": 8,
+      "is_eliminatory": false,
+      "coverage_key": "clients_flux2",
+      "rfi_question_template": "Combien de clients sont en production sur le flux 2 ? Depuis quand ? Références vérifiables ?"
+    },
+    {
+      "id": "ereporting_b2c",
+      "category": "compliance",
+      "name": "E-reporting B2C",
+      "description": "Capacité à agréger ticket Z et/ou factures B2C pour l'e-reporting",
+      "weight_default": 7,
+      "is_eliminatory": false,
+      "coverage_key": "ereporting_b2c",
+      "rfi_question_template": "Quelles sources de données B2C sont supportées pour l'e-reporting (ticket Z, factures unitaires) ?"
+    },
+    {
+      "id": "ocr_ia",
+      "category": "technical",
+      "name": "Extraction OCR / IA",
+      "description": "Traitement des documents entrants non structurés (OCR, IA)",
+      "weight_default": 4,
+      "is_eliminatory": false,
+      "coverage_key": "ocr_ia",
+      "rfi_question_template": "Proposez-vous l'extraction automatique (OCR / IA) des factures PDF ou scannées ? Précision et validation humaine ?"
+    },
+    {
+      "id": "annuaire_prod",
+      "category": "compliance",
+      "name": "Raccordement annuaire production",
+      "description": "Raccordement à l'annuaire national des entreprises en production",
+      "weight_default": 6,
+      "is_eliminatory": false,
+      "coverage_key": "annuaire_prod",
+      "rfi_question_template": "Le raccordement à l'annuaire de production est-il effectif ? Roadmap si en cours ?"
     }
   ]
 }

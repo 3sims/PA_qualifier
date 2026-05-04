@@ -13,7 +13,7 @@ import type { PAInContext, PAV2Coverage, CoverageLevel } from './types';
 
 function countUndocumentedItems(pa: PAInContext): number {
   let count = 0;
-  for (const [key, val] of Object.entries(pa.coverage)) {
+  for (const [key, val] of Object.entries(pa.coverage ?? {})) {
     if (key.endsWith('_confidence')) continue;
     if ((val as CoverageLevel) === '?') count++;
   }
@@ -70,7 +70,7 @@ export function getUndocumentedItems(pa: PAInContext): Array<{
   };
 
   const items: Array<{ key: string; label: string }> = [];
-  for (const [key, val] of Object.entries(pa.coverage)) {
+  for (const [key, val] of Object.entries(pa.coverage ?? {})) {
     if (key.endsWith('_confidence')) continue;
     if ((val as CoverageLevel) === '?') {
       items.push({

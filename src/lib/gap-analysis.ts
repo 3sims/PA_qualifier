@@ -32,10 +32,20 @@ const PRIORITY_MULTIPLIERS = [3, 2.4, 1.8, 1.3, 1] as const;
 
 const PRIORITY_FEATURES: Record<PriorityKey, string[]> = {
   erp_integration: ['erp_sap_native', 'erp_sage_native', 'erp_cegid_native'],
-  functional_coverage: ['emission_b2b', 'reception_b2b', 'peppol_support', 'edi_support'],
+  functional_coverage: [
+    'emission_b2b',
+    'reception_b2b',
+    'peppol_support',
+    'edi_support',
+    'clients_flux2',
+    'ereporting_b2c',
+    'portail_fournisseur',
+    'annuaire_prod',
+    'ocr_ia',
+  ],
   cost: [],
   support_quality: ['support_fr'],
-  security_sovereignty: ['iso27001', 'archiving_nf_z42013', 'data_hosting'],
+  security_sovereignty: ['iso27001', 'archiving_nf_z42013', 'data_hosting', 'auth_2fa'],
 };
 
 // ---------------------------------------------------------------------------
@@ -88,7 +98,7 @@ function getFeatureScore(
   // Toutes les autres features : via coverage_key dans l'objet coverage
   const coverageKey = feature.coverage_key;
   if (!coverageKey) return 0;
-  const level = pa.coverage[coverageKey] as CoverageLevel | undefined;
+  const level = pa.coverage?.[coverageKey] as CoverageLevel | undefined;
   return coverageLevelToScore(level);
 }
 
@@ -147,6 +157,54 @@ export const ELIMINATORY_CRITERIA: EliminatoryCriterion[] = [
       return level !== '✓';
     },
     message: 'Archivage probant NF Z 42-013 non certifié — exigé par le client',
+  },
+  {
+    id: 'missing_2fa',
+    label: 'Double authentification',
+    check: (pa, answers) => {
+      if (answers.needs_2fa !== 'yes') return false;
+      const level = pa.coverage.auth_2fa as CoverageLevel | undefined;
+      return level === '✗' || level === '~';
+    },
+    message: 'Double authentification non conforme aux exigences client',
+  },
+  {
+    id: 'missing_portail_fournisseur',
+    label: 'Portail fournisseur',
+    check: (pa, answers) =>
+      answers.needs_portail_fournisseur === 'yes' &&
+      (pa.coverage.portail_fournisseur as CoverageLevel | undefined) === '✗',
+    message: 'Portail fournisseur absent — exigé par le client',
+  },
+  {
+    id: 'missing_b2c_ereporting',
+    label: 'E-reporting B2C',
+    check: (pa, answers) => {
+      if (answers.has_b2c_activity !== 'yes') return false;
+      const level = pa.coverage.ereporting_b2c as CoverageLevel | undefined;
+      return level === '✗' || level === '~';
+    },
+    message: 'Couverture e-reporting B2C insuffisante pour l\'activite client',
+  },
+  {
+    id: 'missing_notes_de_frais',
+    label: 'Notes de frais',
+    check: (pa, answers) => {
+      if (answers.has_notes_de_frais !== 'yes') return false;
+      const level = pa.coverage.notes_de_frais as CoverageLevel | undefined;
+      return level === '✗' || level === '~';
+    },
+    message: 'Gestion des notes de frais insuffisante — exigée par le client',
+  },
+  {
+    id: 'missing_ocr_ia',
+    label: 'OCR / IA documents',
+    check: (pa, answers) => {
+      if (answers.needs_ocr_ia !== 'yes') return false;
+      const level = pa.coverage.ocr_ia as CoverageLevel | undefined;
+      return level === '✗' || level === '~';
+    },
+    message: 'Extraction OCR / IA non adaptée aux exigences client',
   },
 ];
 
@@ -239,7 +297,7 @@ function buildStrengths(pa: PAProfile, features: FeatureCatalogItem[]): string[]
   for (const feature of sorted) {
     if (strengths.length >= 3) break;
     if (feature.coverage_key && feature.weight_default >= 5) {
-      const level = pa.coverage[feature.coverage_key] as CoverageLevel | undefined;
+      const level = pa.coverage?.[feature.coverage_key] as CoverageLevel | undefined;
       if (level === '✓') strengths.push(feature.name);
     } else if (
       ['erp_sap_native', 'erp_sage_native', 'erp_cegid_native'].includes(feature.id) &&
@@ -266,7 +324,7 @@ function buildGaps(pa: PAProfile, features: FeatureCatalogItem[]): string[] {
   for (const feature of sorted) {
     if (gaps.length >= 3) break;
     if (feature.coverage_key && feature.weight_default >= 5) {
-      const level = pa.coverage[feature.coverage_key] as CoverageLevel | undefined;
+      const level = pa.coverage?.[feature.coverage_key] as CoverageLevel | undefined;
       if (level === '✗') {
         gaps.push(feature.name);
       } else if (level === '~') {
@@ -281,7 +339,7 @@ function buildUnknownFeatures(pa: PAProfile, features: FeatureCatalogItem[]): st
   const unknown: string[] = [];
   for (const feature of features) {
     if (!feature.coverage_key) continue;
-    const level = pa.coverage[feature.coverage_key] as CoverageLevel | undefined;
+    const level = pa.coverage?.[feature.coverage_key] as CoverageLevel | undefined;
     if (level === '?' || level === undefined) {
       unknown.push(feature.name);
     }
