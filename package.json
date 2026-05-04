@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@react-pdf/renderer": "^3.4.0",
+    "@supabase/supabase-js": "^2.105.1",
     "@tavily/core": "^0.7.2",
     "next": "^15.0.0",
     "react": "^18.3.1",

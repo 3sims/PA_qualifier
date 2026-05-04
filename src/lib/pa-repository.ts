@@ -3,13 +3,19 @@
  *
  * Couche d'abstraction pour l'accès aux profils PA.
  * V1 : lecture depuis le fichier JSON local (pa-seed-v1.json)
- * V2 : Supabase (activé en ajoutant NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY dans .env.local)
+ * V2 : Supabase — table `pa` de PA_selector (activé via .env.local)
+ *
+ * Bascule automatique : si NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (ou
+ * SUPABASE_SERVICE_KEY) sont définis, SupabasePARepository est utilisé.
+ * Sinon, JsonPARepository lit pa-seed-v1.json.
  *
  * Aucune route API ne doit importer pa-seed-v1.json directement.
  * Toutes les routes utilisent : import { paRepository } from '@/lib/pa-repository'
  */
 
-import type { PAProfile } from './types';
+import type { PAProfile, PAV2Coverage, PAERPIntegrationV2, CoverageLevel, DataHosting } from './types';
+import type { SupabasePARow } from './supabase';
+import { supabaseAdmin } from './supabase';
 
 // ---------------------------------------------------------------------------
 // Interfaces
@@ -73,24 +79,176 @@ class JsonPARepository implements PARepository {
 }
 
 // ---------------------------------------------------------------------------
-// V2 — Supabase stub (activée quand les variables d'env sont présentes)
-// Pour activer : npm install @supabase/supabase-js, puis décommenter l'implémentation
-// et remplacer ce stub.
+// V2 — Supabase (table `pa` de PA_selector)
 // ---------------------------------------------------------------------------
 
+// Colonnes à sélectionner — on évite SELECT * pour limiter la bande passante
+const PA_SELECT_COLUMNS = [
+  'id', 'pa_slug', 'nom',
+  'statut_immatriculation', 'souverainete_donnees',
+  'emission_factures', 'reception_factures', 'gestion_avoirs',
+  'e_reporting_transaction', 'e_reporting_paiement',
+  'chorus_pro', 'traduction_edi', 'access_point_peppol',
+  'archivage', 'certification_iso27001', 'api_disponible',
+  'erp_natifs', 'derniere_mise_a_jour',
+  'auth_double_facteur', 'signature_electronique',
+  'support_ereporting_b2c', 'transformation_data_ereporting',
+].join(',');
+
+function boolToCoverage(val: boolean | null | undefined): CoverageLevel {
+  if (val === true) return '✓';
+  if (val === false) return '✗';
+  return '?';
+}
+
+function mapCoverage(row: SupabasePARow): PAV2Coverage {
+  const peppolMap: Record<string, CoverageLevel> = { oui: '✓', prochainement: '~', non: '✗' };
+  const peppolLevel: CoverageLevel = (row.access_point_peppol ? peppolMap[row.access_point_peppol] : '?') ?? '?';
+
+  let archivageLevel: CoverageLevel = '?';
+  if (row.archivage === 'valeur_probante' || row.archivage === 'nf461') archivageLevel = '✓';
+  else if (row.archivage === 'simple') archivageLevel = '~';
+  else if (row.archivage === 'non') archivageLevel = '✗';
+
+  const eReporting = (row.e_reporting_transaction || row.e_reporting_paiement) ?? null;
+
+  return {
+    emission:                  boolToCoverage(row.emission_factures),
+    emission_confidence:       'indicative',
+    reception:                 boolToCoverage(row.reception_factures),
+    reception_confidence:      'indicative',
+    avoirs:                    boolToCoverage(row.gestion_avoirs),
+    avoirs_confidence:         'indicative',
+    e_reporting:               boolToCoverage(eReporting),
+    e_reporting_confidence:    'indicative',
+    b2g_chorus:                boolToCoverage(row.chorus_pro),
+    b2g_chorus_confidence:     'indicative',
+    edi_edifact:               boolToCoverage(row.traduction_edi),
+    edi_edifact_confidence:    'indicative',
+    peppol:                    peppolLevel,
+    peppol_confidence:         'indicative',
+    archivage_10ans:           archivageLevel,
+    archivage_10ans_confidence:'indicative',
+    iso27001:                  boolToCoverage(row.certification_iso27001),
+    iso27001_confidence:       'indicative',
+    api_rest:                  boolToCoverage(row.api_disponible),
+    api_rest_confidence:       'indicative',
+  };
+}
+
+function mapDataHosting(val: SupabasePARow['souverainete_donnees']): DataHosting | 'unknown' {
+  if (val === 'france') return 'FRANCE';
+  if (val === 'ue')     return 'EU';
+  if (val === 'hors_ue') return 'INTL';
+  return 'unknown';
+}
+
+function mapStatus(val: SupabasePARow['statut_immatriculation']): PAProfile['status'] {
+  if (val === 'active')    return 'immatriculée';
+  if (val === 'suspendue') return 'en_cours';
+  if (val === 'retiree')   return 'radiée';
+  return 'unknown';
+}
+
+function mapERPIntegrations(row: SupabasePARow): PAERPIntegrationV2[] {
+  if (!row.erp_natifs?.length) return [];
+  return row.erp_natifs.map((name) => ({
+    erp_id:           name.toLowerCase().replace(/\s+/g, '_'),
+    erp_name:         name,
+    integration_type: 'native' as const,
+    coverage:         ['emis', 'recus'] as ('emis' | 'recus' | 'avoirs')[],
+  }));
+}
+
+function rowToPAProfile(row: SupabasePARow): PAProfile {
+  return {
+    id:                  row.id,
+    name:                row.nom,
+    status:              mapStatus(row.statut_immatriculation),
+    data_hosting:        mapDataHosting(row.souverainete_donnees),
+    lead_time_weeks_min: null,
+    lead_time_weeks_max: null,
+    erp_integrations:    mapERPIntegrations(row),
+    coverage:            mapCoverage(row),
+    last_updated:        row.derniere_mise_a_jour ?? null,
+    dgfip_id:            row.pa_slug,
+  };
+}
+
 class SupabasePARepository implements PARepository {
-  private async notReady(): Promise<never> {
-    throw new Error(
-      '[pa-repository] Supabase V2 non activé.\n' +
-      'Pour activer : npm install @supabase/supabase-js\n' +
-      'puis implémenter SupabasePARepository dans lib/pa-repository.ts'
-    );
+  private get client() {
+    if (!supabaseAdmin) {
+      throw new Error('[pa-repository] Client Supabase non initialisé — vérifier les variables d\'env.');
+    }
+    return supabaseAdmin;
   }
 
-  async findAll()                                    { return this.notReady(); }
-  async findById(_id: string)                        { return this.notReady(); }
-  async findByNames(_names: string[])                { return this.notReady(); }
-  async searchByProfile(_f: PASearchFilters)         { return this.notReady(); }
+  async findAll(): Promise<PAProfile[]> {
+    const { data, error } = await this.client
+      .from('pa')
+      .select(PA_SELECT_COLUMNS)
+      .order('nom');
+    if (error) throw new Error(`[pa-repository] findAll: ${error.message}`);
+    return (data as unknown as SupabasePARow[]).map(rowToPAProfile);
+  }
+
+  async findById(id: string): Promise<PAProfile | null> {
+    const { data, error } = await this.client
+      .from('pa')
+      .select(PA_SELECT_COLUMNS)
+      .eq('id', id)
+      .limit(1)
+      .single();
+    if (error) {
+      if (error.code === 'PGRST116') return null; // not found
+      throw new Error(`[pa-repository] findById: ${error.message}`);
+    }
+    return rowToPAProfile(data as unknown as SupabasePARow);
+  }
+
+  async findByNames(names: string[]): Promise<PAProfile[]> {
+    const lower = names.map((n) => n.toLowerCase());
+    const { data, error } = await this.client
+      .from('pa')
+      .select(PA_SELECT_COLUMNS);
+    if (error) throw new Error(`[pa-repository] findByNames: ${error.message}`);
+    return (data as unknown as SupabasePARow[])
+      .filter((row) => lower.includes(row.nom.toLowerCase()))
+      .map(rowToPAProfile);
+  }
+
+  async searchByProfile(filters: PASearchFilters): Promise<PAProfile[]> {
+    let query = this.client.from('pa').select(PA_SELECT_COLUMNS);
+
+    if (filters.status) {
+      const supabaseStatus =
+        filters.status === 'immatriculée' ? 'active' :
+        filters.status === 'en_cours'     ? 'suspendue' :
+        filters.status === 'radiée'       ? 'retiree' : null;
+      if (supabaseStatus) query = query.eq('statut_immatriculation', supabaseStatus);
+    }
+
+    if (filters.data_hosting) {
+      const supabaseHosting =
+        filters.data_hosting === 'FRANCE' ? 'france' :
+        filters.data_hosting === 'EU'     ? 'ue' :
+        filters.data_hosting === 'INTL'   ? 'hors_ue' : null;
+      if (supabaseHosting) query = query.eq('souverainete_donnees', supabaseHosting);
+    }
+
+    if (filters.erp_id) {
+      query = query.contains('erp_natifs', [filters.erp_id]);
+    }
+
+    if (filters.name_in) {
+      const nomList = filters.name_in;
+      query = query.in('nom', nomList);
+    }
+
+    const { data, error } = await query;
+    if (error) throw new Error(`[pa-repository] searchByProfile: ${error.message}`);
+    return (data as unknown as SupabasePARow[]).map(rowToPAProfile);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -98,12 +256,13 @@ class SupabasePARepository implements PARepository {
 // ---------------------------------------------------------------------------
 
 function createPARepository(): PARepository {
-  if (
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  ) {
+  const hasSupabase = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  if (hasSupabase) {
+    console.info('[pa-repository] Mode Supabase activé (table `pa` de PA_selector)');
     return new SupabasePARepository();
   }
+  console.info('[pa-repository] Mode JSON local (pa-seed-v1.json)');
   return new JsonPARepository();
 }
 
